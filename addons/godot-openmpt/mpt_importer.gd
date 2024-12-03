@@ -33,17 +33,24 @@ func _get_import_options(path, preset_index) -> Array[Dictionary]:
 				"type": TYPE_INT,
 				"property_hint": PROPERTY_HINT_ENUM,
 				"hint_string": "Disabled,Enabled",
-				"default_value": 0
+				"default_value": 1
+			},
+			{
+				"name": "playback/interpolation",
+				"type": TYPE_INT,
+				"property_hint": PROPERTY_HINT_ENUM,
+				"hint_string": "Default,Nothing,Linear,Cubic:4,Sinc:8",
+				"default_value": 2
+			},
+		   {
+				"name": "load/skip_plugins",
+				"type": TYPE_BOOL,
+				"default_value": false
 		   },
 		   {
-		   		"name": "load/skip_plugins",
-		   		"type": TYPE_BOOL,
-		   		"default_value": false
-		   },
-		   {
-		   		"name": "load/skip_subsongs_init",
-		   		"type": TYPE_BOOL,
-		   		"default_value": false
+				"name": "load/skip_subsongs_init",
+				"type": TYPE_BOOL,
+				"default_value": false
 		   }]
 
 func _get_option_visibility(path, option_name, options) -> bool:
@@ -75,4 +82,5 @@ func _import(source_file, save_path, options, r_platform_variants, r_gen_files) 
 
 	stream.stereo = !options["force/mono"]
 	stream.loop_mode = options["playback/loop_mode"]
+	stream.interpolation_mode = options["playback/interpolation"]
 	return ResourceSaver.save(stream, "%s.%s" % [save_path, _get_save_extension()])

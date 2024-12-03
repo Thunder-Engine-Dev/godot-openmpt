@@ -305,6 +305,8 @@ int32_t AudioStreamPlaybackMPT::_mix(AudioFrame *p_buffer, double p_rate_scale, 
 
 	this->mpt_module->set_repeat_count(base->loop_mode == AudioStreamMPT::LoopMode::LOOP_DISABLED ? 0 : -1);
 
+	this->mpt_module->set_render_param(openmpt::module::render_param::RENDER_INTERPOLATIONFILTER_LENGTH, base->interpolation_mode);
+
 	double srate = (AudioServer::get_singleton()->get_mix_rate() * p_rate_scale) * AudioServer::get_singleton()->get_playback_speed_scale();
 
 	if (base->stereo) {
@@ -414,6 +416,14 @@ void AudioStreamMPT::set_loop_mode(LoopMode p_loop_mode) {
 
 AudioStreamMPT::LoopMode AudioStreamMPT::get_loop_mode() const {
 	return this->loop_mode;
+}
+
+void AudioStreamMPT::set_interpolation_mode(InterpolationMode p_interpolation_mode) {
+	this->interpolation_mode = p_interpolation_mode;
+}
+
+AudioStreamMPT::InterpolationMode AudioStreamMPT::get_interpolation_mode() const {
+	return this->interpolation_mode;
 }
 
 void AudioStreamMPT::set_stereo(bool p_enable) {
@@ -713,6 +723,9 @@ void AudioStreamMPT::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_loop_mode", "loop_mode"), &AudioStreamMPT::set_loop_mode);
 	ClassDB::bind_method(D_METHOD("get_loop_mode"), &AudioStreamMPT::get_loop_mode);
 
+	ClassDB::bind_method(D_METHOD("set_interpolation_mode", "interpolation_mode"), &AudioStreamMPT::set_interpolation_mode);
+	ClassDB::bind_method(D_METHOD("get_interpolation_mode"), &AudioStreamMPT::get_interpolation_mode);
+
 	ClassDB::bind_method(D_METHOD("set_stereo", "stereo"), &AudioStreamMPT::set_stereo);
 	ClassDB::bind_method(D_METHOD("is_stereo"), &AudioStreamMPT::is_stereo);
 
@@ -767,6 +780,7 @@ void AudioStreamMPT::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_BYTE_ARRAY, "data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_data", "get_data");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "loop_mode", PROPERTY_HINT_ENUM, "Disabled,Enabled"), "set_loop_mode", "get_loop_mode");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "interpolation_mode", PROPERTY_HINT_ENUM, "Default,Nothing,Linear,Cubic:4,Sinc:8"), "set_interpolation_mode", "get_interpolation_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "stereo"), "set_stereo", "is_stereo");
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "skip_plugins"), "set_skip_plugins", "get_skip_plugins");
@@ -775,6 +789,12 @@ void AudioStreamMPT::_bind_methods() {
 
 	BIND_ENUM_CONSTANT(LOOP_DISABLED);
 	BIND_ENUM_CONSTANT(LOOP_ENABLED);
+
+	BIND_ENUM_CONSTANT(INTERPOLATION_DEFAULT);
+	BIND_ENUM_CONSTANT(INTERPOLATION_NOTHING);
+	BIND_ENUM_CONSTANT(INTERPOLATION_LINEAR);
+	BIND_ENUM_CONSTANT(INTERPOLATION_CUBIC);
+	BIND_ENUM_CONSTANT(INTERPOLATION_SINC);
 	
 	BIND_ENUM_CONSTANT(COMMAND_NOTE);
 	BIND_ENUM_CONSTANT(COMMAND_INSTRUMENT); 
