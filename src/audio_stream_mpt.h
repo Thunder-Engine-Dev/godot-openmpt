@@ -116,6 +116,14 @@ public:
 		LOOP_ENABLED
 	};
 
+	enum InterpolationMode {
+		INTERPOLATION_DEFAULT = 0,
+		INTERPOLATION_NOTHING = 1,
+		INTERPOLATION_LINEAR = 2,
+		INTERPOLATION_CUBIC = 4,
+		INTERPOLATION_SINC = 8
+	};
+
 	enum CommandIndex {
 		COMMAND_NOTE = 0,
 		COMMAND_INSTRUMENT = 1, 
@@ -126,6 +134,7 @@ public:
 	};
 private:
 	LoopMode loop_mode = LoopMode::LOOP_DISABLED;
+	InterpolationMode interpolation_mode = InterpolationMode::INTERPOLATION_DEFAULT;
 	bool stereo = true;
 	bool skip_plugins = false;
 	bool skip_subsongs_init = false;
@@ -148,6 +157,9 @@ protected:
 public:
 	void set_loop_mode(LoopMode p_loop_mode);
 	LoopMode get_loop_mode() const;
+
+	void set_interpolation_mode(InterpolationMode p_interpolation_mode);
+	InterpolationMode get_interpolation_mode() const;
 
 	void set_stereo(bool p_enable);
 	bool is_stereo() const;
@@ -216,6 +228,7 @@ public:
 };
 
 VARIANT_ENUM_CAST(AudioStreamMPT::LoopMode)
+VARIANT_ENUM_CAST(AudioStreamMPT::InterpolationMode)
 VARIANT_ENUM_CAST(AudioStreamMPT::CommandIndex)
 
 #endif // AUDIO_STREAM_MPT_H
