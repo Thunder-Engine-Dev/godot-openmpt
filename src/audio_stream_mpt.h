@@ -124,6 +124,14 @@ public:
 		INTERPOLATION_SINC = 8
 	};
 
+	enum AmigaFilter {
+		AMIGA_DISABLED = 0,
+		AMIGA_AUTO = 1,
+		AMIGA_UNFILTERED = 2,
+		AMIGA_A500 = 3,
+		AMIGA_A1200 = 4
+	};
+
 	enum CommandIndex {
 		COMMAND_NOTE = 0,
 		COMMAND_INSTRUMENT = 1, 
@@ -135,6 +143,7 @@ public:
 private:
 	LoopMode loop_mode = LoopMode::LOOP_DISABLED;
 	InterpolationMode interpolation_mode = InterpolationMode::INTERPOLATION_DEFAULT;
+	AmigaFilter amiga_filter = AmigaFilter::AMIGA_DISABLED;
 	bool stereo = true;
 	bool skip_plugins = false;
 	bool skip_subsongs_init = false;
@@ -160,6 +169,9 @@ public:
 
 	void set_interpolation_mode(InterpolationMode p_interpolation_mode);
 	InterpolationMode get_interpolation_mode() const;
+
+	void set_amiga_filter(AmigaFilter p_amiga_filter);
+	AmigaFilter get_amiga_filter() const;
 
 	void set_stereo(bool p_enable);
 	bool is_stereo() const;
@@ -229,6 +241,7 @@ public:
 
 VARIANT_ENUM_CAST(AudioStreamMPT::LoopMode)
 VARIANT_ENUM_CAST(AudioStreamMPT::InterpolationMode)
+VARIANT_ENUM_CAST(AudioStreamMPT::AmigaFilter)
 VARIANT_ENUM_CAST(AudioStreamMPT::CommandIndex)
 
 #endif // AUDIO_STREAM_MPT_H

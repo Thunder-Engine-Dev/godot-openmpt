@@ -306,6 +306,22 @@ int32_t AudioStreamPlaybackMPT::_mix(AudioFrame *p_buffer, double p_rate_scale, 
 	this->mpt_module->set_repeat_count(base->loop_mode == AudioStreamMPT::LoopMode::LOOP_DISABLED ? 0 : -1);
 
 	this->mpt_module->set_render_param(openmpt::module::render_param::RENDER_INTERPOLATIONFILTER_LENGTH, base->interpolation_mode);
+	
+	this->mpt_module->ctl_set_boolean("render.resampler.emulate_amiga", base->amiga_filter == AudioStreamMPT::AmigaFilter::AMIGA_DISABLED ? false : true);
+	switch (base->amiga_filter) {
+		case AudioStreamMPT::AmigaFilter::AMIGA_AUTO:
+			this->mpt_module->ctl_set_text( "render.resampler.emulate_amiga_type", "auto" );
+			break;
+		case AudioStreamMPT::AmigaFilter::AMIGA_UNFILTERED:
+			this->mpt_module->ctl_set_text( "render.resampler.emulate_amiga_type", "unfiltered" );
+			break;
+		case AudioStreamMPT::AmigaFilter::AMIGA_A500:
+			this->mpt_module->ctl_set_text( "render.resampler.emulate_amiga_type", "a500" );
+			break;
+		case AudioStreamMPT::AmigaFilter::AMIGA_A1200:
+			this->mpt_module->ctl_set_text( "render.resampler.emulate_amiga_type", "a1200" );
+			break;
+	}
 
 	double srate = (AudioServer::get_singleton()->get_mix_rate() * p_rate_scale) * AudioServer::get_singleton()->get_playback_speed_scale();
 
@@ -424,6 +440,14 @@ void AudioStreamMPT::set_interpolation_mode(InterpolationMode p_interpolation_mo
 
 AudioStreamMPT::InterpolationMode AudioStreamMPT::get_interpolation_mode() const {
 	return this->interpolation_mode;
+}
+
+void AudioStreamMPT::set_amiga_filter(AmigaFilter p_amiga_filter) {
+	this->amiga_filter = p_amiga_filter;
+}
+
+AudioStreamMPT::AmigaFilter AudioStreamMPT::get_amiga_filter() const {
+	return this->amiga_filter;
 }
 
 void AudioStreamMPT::set_stereo(bool p_enable) {
@@ -726,6 +750,9 @@ void AudioStreamMPT::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_interpolation_mode", "interpolation_mode"), &AudioStreamMPT::set_interpolation_mode);
 	ClassDB::bind_method(D_METHOD("get_interpolation_mode"), &AudioStreamMPT::get_interpolation_mode);
 
+	ClassDB::bind_method(D_METHOD("set_amiga_filter", "amiga_filter"), &AudioStreamMPT::set_amiga_filter);
+	ClassDB::bind_method(D_METHOD("get_amiga_filter"), &AudioStreamMPT::get_amiga_filter);
+
 	ClassDB::bind_method(D_METHOD("set_stereo", "stereo"), &AudioStreamMPT::set_stereo);
 	ClassDB::bind_method(D_METHOD("is_stereo"), &AudioStreamMPT::is_stereo);
 
@@ -781,6 +808,7 @@ void AudioStreamMPT::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_BYTE_ARRAY, "data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_data", "get_data");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "loop_mode", PROPERTY_HINT_ENUM, "Disabled,Enabled"), "set_loop_mode", "get_loop_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "interpolation_mode", PROPERTY_HINT_ENUM, "Default,Nothing,Linear,Cubic:4,Sinc:8"), "set_interpolation_mode", "get_interpolation_mode");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "amiga_filter", PROPERTY_HINT_ENUM, "Disabled,Auto,Unfiltered,A500,A1200"), "set_amiga_filter", "get_amiga_filter");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "stereo"), "set_stereo", "is_stereo");
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "skip_plugins"), "set_skip_plugins", "get_skip_plugins");
@@ -795,6 +823,12 @@ void AudioStreamMPT::_bind_methods() {
 	BIND_ENUM_CONSTANT(INTERPOLATION_LINEAR);
 	BIND_ENUM_CONSTANT(INTERPOLATION_CUBIC);
 	BIND_ENUM_CONSTANT(INTERPOLATION_SINC);
+	
+	BIND_ENUM_CONSTANT(AMIGA_DISABLED);
+	BIND_ENUM_CONSTANT(AMIGA_AUTO);
+	BIND_ENUM_CONSTANT(AMIGA_UNFILTERED);
+	BIND_ENUM_CONSTANT(AMIGA_A500);
+	BIND_ENUM_CONSTANT(AMIGA_A1200);
 	
 	BIND_ENUM_CONSTANT(COMMAND_NOTE);
 	BIND_ENUM_CONSTANT(COMMAND_INSTRUMENT); 
