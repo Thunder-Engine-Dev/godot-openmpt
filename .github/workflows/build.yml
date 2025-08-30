@@ -16,13 +16,13 @@ jobs:
         compilers:
           - cc: gcc
             cxx: g++
-            mingw: false
+            mingw: "false"
           - cc: x86_64-w64-mingw32-gcc
             cxx: x86_64-w64-mingw32-g++
-            mingw: true
+            mingw: "true"
           - cc: i686-w64-mingw32-gcc
             cxx: i686-w64-mingw32-g++
-            mingw: true
+            mingw: "true"
             bits: 32
     env:
       MINGW_ARCH: ${{ matrix.compilers.bits == 32 && 'i686' || 'x86_64' }}
