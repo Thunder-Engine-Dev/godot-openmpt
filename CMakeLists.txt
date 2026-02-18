@@ -115,12 +115,12 @@ else()
 	set(CMAKE_CXX_FLAGS_DEBUG "")
 	set(CMAKE_C_FLAGS_DEBUG "")
 
-	set(GODOT_LINKER_FLAGS "-static-libgcc -static-libstdc++ -Wl,-flto,--gc-sections,-R,'$$ORIGIN'")
+	set(GODOT_LINKER_FLAGS "-static-libgcc -static-libstdc++ -Wl,--gc-sections,-R,'$$ORIGIN'")
 
-  set(CMAKE_AR, "gcc-ar")
-  set(CMAKE_NM, "gcc-nm")
+    set(CMAKE_AR, "gcc-ar")
+    set(CMAKE_NM, "gcc-nm")
 	set(CMAKE_RANLIB "gcc-ranlib")
-	set(GODOT_COMPILE_FLAGS "-fPIC -flto -fvisibility=hidden -fvisibility-inlines-hidden -ffunction-sections -fdata-sections -fexceptions -frtti -pthread")
+	set(GODOT_COMPILE_FLAGS "-fPIC -fvisibility=hidden -fvisibility-inlines-hidden -ffunction-sections -fdata-sections -fexceptions -frtti -pthread")
 
 	if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
 		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -O3")
@@ -134,11 +134,11 @@ set_property(TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY LINK_FLAGS ${GODOT_LI
 set_property(TARGET libopenmpt APPEND_STRING PROPERTY LINK_FLAGS ${GODOT_LINKER_FLAGS})
 
 if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" AND CMAKE_BUILD_TYPE MATCHES Debug)
-	
 
-	# Only generate debug symbols for the main extension... NOT libopenmpt. 
-	# Otherwise the binary sizes will be out of control. 
-	# Comment this out and compile if you really need to debug what libopenmpt is doing 
+
+	# Only generate debug symbols for the main extension... NOT libopenmpt.
+	# Otherwise the binary sizes will be out of control.
+	# Comment this out and compile if you really need to debug what libopenmpt is doing
 	# (you probably don't)
 	#set_property(TARGET libopenmpt APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-omit-frame-pointer -O0 -g")
 	set_property(TARGET libopenmpt APPEND_STRING PROPERTY COMPILE_FLAGS " -O3") # If we don't want debug symbols, may as well -O3
