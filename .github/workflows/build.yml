@@ -33,6 +33,7 @@ jobs:
             android_abi: arm64-v8a
     env:
       MINGW_ARCH: ${{ matrix.platform.mingw == 32 && 'i686' || 'x86_64' }}
+      ANDROID_PLATFORM: android-23
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -90,7 +91,7 @@ jobs:
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
             -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=${{ matrix.platform.android_abi }}
+            -DANDROID_ABI=${{ matrix.platform.android_abi }} -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }}
           cmake --build custom-godotcpp-build --config ${{ matrix.build }}
 
       - name: Cache build dir
@@ -130,7 +131,7 @@ jobs:
           cmake -S . -B build -G Ninja \
             -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=${{ matrix.platform.android_abi }}
+            -DANDROID_ABI=${{ matrix.platform.android_abi }} -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }}
           cmake --build build --config ${{ matrix.build }}
 
       - name: Upload Built Library Artifact
