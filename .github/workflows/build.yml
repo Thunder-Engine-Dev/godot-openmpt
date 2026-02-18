@@ -59,7 +59,6 @@ jobs:
         with:
           path: custom-godotcpp-build
           key: ${{ matrix.platform.name }}-${{ matrix.build }}-${{ hashFiles('.gitmodules') }}
-          restore-keys: ${{ matrix.platform.name }}-${{ matrix.build }}-
 
       - name: Build godot-cpp
         if: ${{ !matrix.platform.mingw && !matrix.platform.android_abi }}
@@ -96,9 +95,6 @@ jobs:
         with:
           path: build
           key: ${{ matrix.platform.name }}-${{ matrix.build }}-${{ github.ref_name }}-${{ hashFiles('CMakeLists.txt') }}
-          restore-keys: |
-            ${{ matrix.platform.name }}-${{ matrix.build }}-${{ github.ref_name }}-
-            ${{ matrix.platform.name }}-${{ matrix.build }}-
 
       - name: Build library
         if: ${{ !matrix.platform.mingw && !matrix.platform.android_abi }}
