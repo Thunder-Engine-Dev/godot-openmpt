@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         build: [Release, Debug]
@@ -21,7 +21,6 @@ jobs:
           - name: Linux
             cc: gcc
             cxx: g++
-            mingw: 0
           - name: Win64
             cc: x86_64-w64-mingw32-gcc
             cxx: x86_64-w64-mingw32-g++
@@ -30,6 +29,10 @@ jobs:
             cc: i686-w64-mingw32-gcc
             cxx: i686-w64-mingw32-g++
             mingw: 32
+          - name: AndroidV7A
+            android_abi: armeabi-v7a
+          - name: AndroidV8A
+            android_abi: arm64-v8a
     env:
       MINGW_ARCH: ${{ matrix.platform.mingw == 32 && 'i686' || 'x86_64' }}
     steps:
@@ -38,7 +41,7 @@ jobs:
 
       - name: Install MinGW
         if: matrix.platform.mingw
-        uses: egor-tensin/setup-mingw@v2.2.0
+        uses: egor-tensin/setup-mingw@v3
         with:
           platform: ${{ matrix.platform.mingw == 32 && 'x86' || 'x64' }}
           cc: 0
@@ -63,18 +66,7 @@ jobs:
         uses: lukka/get-cmake@latest
 
       - name: Build godot-cpp
-        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && matrix.platform.mingw == 0
-        uses: ashutoshvarma/action-cmake-build@master
-        with:
-          source-dir: custom-godotcpp-build
-          build-dir: custom-godotcpp-build
-          cc: ${{ matrix.platform.cc }}
-          cxx: ${{ matrix.platform.cxx }}
-          configure-options: -G Ninja
-          build-type: ${{ matrix.build }}
-
-      - name: Build godot-cpp MinGW
-        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && matrix.platform.mingw != 0
+        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && !matrix.platform.mingw && !matrix.platform.android_abi
         uses: ashutoshvarma/action-cmake-build@master
         with:
           source-dir: custom-godotcpp-build
@@ -82,13 +74,32 @@ jobs:
           cc: ${{ matrix.platform.cc }}
           cxx: ${{ matrix.platform.cxx }}
           configure-options: >-
-            -DGENERATE_DEBUG_SYMBOLS=OFF
-            -DCMAKE_SYSTEM_NAME=Windows
+            -DGENERATE_DEBUG_SYMBOLS=OFF -G Ninja
+          build-type: ${{ matrix.build }}
+
+      - name: Build godot-cpp (MinGW)
+        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && matrix.platform.mingw && !matrix.platform.android_abi
+        uses: ashutoshvarma/action-cmake-build@master
+        with:
+          source-dir: custom-godotcpp-build
+          build-dir: custom-godotcpp-build
+          cc: ${{ matrix.platform.cc }}
+          cxx: ${{ matrix.platform.cxx }}
+          configure-options: >-
+            -DGENERATE_DEBUG_SYMBOLS=OFF -G Ninja
             -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32
-            -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER
-            -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY
-            -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
-            -G Ninja
+          build-type: ${{ matrix.build }}
+
+      - name: Build godot-cpp (Android)
+        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && !matrix.platform.mingw && matrix.platform.android_abi
+        uses: ashutoshvarma/action-cmake-build@master
+        with:
+          source-dir: custom-godotcpp-build
+          build-dir: custom-godotcpp-build
+          configure-options: >-
+            -DGENERATE_DEBUG_SYMBOLS=OFF -G Ninja
+            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake
+            -DANDROID_ABI=${{ matrix.platform.android_abi }}
           build-type: ${{ matrix.build }}
 
       - name: Save godot-cpp
@@ -111,8 +122,8 @@ jobs:
             ${{ matrix.platform.name }}-${{ matrix.build }}-${{ github.ref_name }}-
             ${{ matrix.platform.name }}-${{ matrix.build }}-
 
-      - name: Build with CMake
-        if: matrix.platform.mingw == 0
+      - name: Build library
+        if: ${{ !matrix.platform.mingw && !matrix.platform.android_abi }}
         uses: ashutoshvarma/action-cmake-build@master
         with:
           build-dir: build
@@ -121,30 +132,37 @@ jobs:
           configure-options: -G Ninja
           build-type: ${{ matrix.build }}
 
-      - name: Build with CMake MinGW
-        if: matrix.platform.mingw != 0
+      - name: Build library (MinGW)
+        if: matrix.platform.mingw && !matrix.platform.android_abi
         uses: ashutoshvarma/action-cmake-build@master
         with:
           build-dir: build
           cc: ${{ matrix.platform.cc }}
           cxx: ${{ matrix.platform.cxx }}
           configure-options: >-
-            -DCMAKE_SYSTEM_NAME=Windows
+            -DGENERATE_DEBUG_SYMBOLS=OFF -G Ninja
             -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32
-            -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER
-            -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY
-            -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
-            -G Ninja
+          build-type: ${{ matrix.build }}
+
+      - name: Build library (Android)
+        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && !matrix.platform.mingw && matrix.platform.android_abi
+        uses: ashutoshvarma/action-cmake-build@master
+        with:
+          build-dir: build
+          configure-options: >-
+            -DGENERATE_DEBUG_SYMBOLS=OFF -G Ninja
+            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake
+            -DANDROID_ABI=${{ matrix.platform.android_abi }}
           build-type: ${{ matrix.build }}
 
       - name: Upload Built Library Artifact
-        # We use v3 of both upload and download artifact for ACT compatibility
         uses: actions/upload-artifact@v4
         with:
           path: addons/godot-openmpt/bin/*
           name: bin-${{ matrix.platform.cc }}-${{ matrix.build }}
+
   package:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build
     steps:
       - name: Checkout repository
