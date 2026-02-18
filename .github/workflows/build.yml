@@ -80,9 +80,12 @@ jobs:
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
             -DGENERATE_DEBUG_SYMBOLS=OFF \
-            -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
             -DCMAKE_C_COMPILER=${{ matrix.platform.cc }} \
-            -DCMAKE_CXX_COMPILER=${{ matrix.platform.cxx }}
+            -DCMAKE_CXX_COMPILER=${{ matrix.platform.cxx }} \
+            -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
+            -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+            -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+            -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
           cmake --build custom-godotcpp-build --config ${{ matrix.build }}
 
       - name: Build godot-cpp (Android)
@@ -125,9 +128,12 @@ jobs:
         run: |
           cmake -S . -B build -G Ninja \
             -DGENERATE_DEBUG_SYMBOLS=OFF \
-            -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
             -DCMAKE_C_COMPILER=${{ matrix.platform.cc }} \
-            -DCMAKE_CXX_COMPILER=${{ matrix.platform.cxx }}
+            -DCMAKE_CXX_COMPILER=${{ matrix.platform.cxx }} \
+            -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
+            -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+            -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+            -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
           cmake --build custom-godotcpp-build --config ${{ matrix.build }}
 
       - name: Build library (Android)
