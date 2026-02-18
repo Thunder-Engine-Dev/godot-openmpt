@@ -56,22 +56,23 @@ jobs:
         with:
           ndk-version: r23c
 
-      - name: Restore godot-cpp
-        id: cache-godot-restore
-        uses: actions/cache/restore@v4
+      - name: Cache godot-cpp
+        id: cache-godot
+        uses: actions/cache@v5
         with:
           path: custom-godotcpp-build
           key: ${{ matrix.platform.name }}-${{ matrix.build }}-${{ hashFiles('.gitmodules') }}
+          restore-keys: ${{ matrix.platform.name }}-${{ matrix.build }}-
 
       - name: Build godot-cpp
-        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && !matrix.platform.mingw && !matrix.platform.android_abi
+        if: ${{ !matrix.platform.mingw && !matrix.platform.android_abi }}
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
             -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }}
           cmake --build custom-godotcpp-build --config ${{ matrix.build }}
 
       - name: Build godot-cpp (MinGW)
-        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && matrix.platform.mingw && !matrix.platform.android_abi
+        if: ${{ matrix.platform.mingw && !matrix.platform.android_abi }}
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
             -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
@@ -84,7 +85,7 @@ jobs:
           cmake --build custom-godotcpp-build --config ${{ matrix.build }}
 
       - name: Build godot-cpp (Android)
-        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && !matrix.platform.mingw && matrix.platform.android_abi
+        if: ${{ !matrix.platform.mingw && matrix.platform.android_abi }}
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
             -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
