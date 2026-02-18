@@ -12,29 +12,31 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        build-type: [Release, Debug]
-        compilers:
-          - cc: gcc
+        build: [Release, Debug]
+        include:
+          - name: Linux
+            cc: gcc
             cxx: g++
-            mingw: "false"
-          - cc: x86_64-w64-mingw32-gcc
+            mingw: 0
+          - name: Win64
+            cc: x86_64-w64-mingw32-gcc
             cxx: x86_64-w64-mingw32-g++
-            mingw: "true"
-          - cc: i686-w64-mingw32-gcc
+            mingw: 64
+          - name: Win32
+            cc: i686-w64-mingw32-gcc
             cxx: i686-w64-mingw32-g++
-            mingw: "true"
-            bits: 32
+            mingw: 32
     env:
-      MINGW_ARCH: ${{ matrix.compilers.bits == 32 && 'i686' || 'x86_64' }}
+      MINGW_ARCH: ${{ matrix.mingw == 32 && 'i686' || 'x86_64' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Install MinGW
-        if: matrix.compilers.mingw == 'true'
+        if: matrix.mingw
         uses: egor-tensin/setup-mingw@v2.2.0
         with:
-          platform: ${{ matrix.compilers.bits == 32 && 'x86' || 'x64' }}
+          platform: ${{ matrix.mingw == 32 && 'x86' || 'x64' }}
           cc: 0
 
       - name: Restore godot-cpp
@@ -42,10 +44,10 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: |
-            ${{ github.workspace }}/godot-cpp/gdextension
-            ${{ github.workspace }}/godot-cpp/include
-            ${{ github.workspace }}/custom-godotcpp-build
-          key: ${{ matrix.compilers.cc }}-${{ hashFiles('.gitmodules') }}-${{ matrix.build-type }}
+            godot-cpp/gdextension
+            godot-cpp/include
+            custom-godotcpp-build
+          key: ${{ matrix.cc }}-${{ hashFiles('.gitmodules') }}-${{ matrix.build }}
 
       - name: Update submodules
         if: steps.cache-godot-restore.outputs.cache-hit != 'true'
@@ -57,24 +59,24 @@ jobs:
         uses: lukka/get-cmake@latest
 
       - name: Build godot-cpp
-        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && matrix.compilers.mingw != 'true'
+        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && matrix.mingw == 0
         uses: ashutoshvarma/action-cmake-build@master
         with:
-          source-dir: ${{ github.workspace }}/custom-godotcpp-build
-          build-dir: ${{ github.workspace }}/custom-godotcpp-build
-          cc: ${{ matrix.compilers.cc }}
-          cxx: ${{ matrix.compilers.cxx }}
+          source-dir: custom-godotcpp-build
+          build-dir: custom-godotcpp-build
+          cc: ${{ matrix.cc }}
+          cxx: ${{ matrix.cxx }}
           configure-options: -G Ninja
-          build-type: ${{ matrix.build-type }}
+          build-type: ${{ matrix.build }}
 
       - name: Build godot-cpp MinGW
-        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && matrix.compilers.mingw == 'true'
+        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && matrix.mingw != 0
         uses: ashutoshvarma/action-cmake-build@master
         with:
-          source-dir: ${{ github.workspace }}/custom-godotcpp-build
-          build-dir: ${{ github.workspace }}/custom-godotcpp-build
-          cc: ${{ matrix.compilers.cc }}
-          cxx: ${{ matrix.compilers.cxx }}
+          source-dir: custom-godotcpp-build
+          build-dir: custom-godotcpp-build
+          cc: ${{ matrix.cc }}
+          cxx: ${{ matrix.cxx }}
           configure-options: >-
             -DGENERATE_DEBUG_SYMBOLS=OFF
             -DCMAKE_SYSTEM_NAME=Windows
@@ -83,35 +85,45 @@ jobs:
             -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY
             -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
             -G Ninja
-          build-type: ${{ matrix.build-type }}
+          build-type: ${{ matrix.build }}
 
       - name: Save godot-cpp
         id: cache-godot-save
         uses: actions/cache/save@v4
         with:
           path: |
-            ${{ github.workspace }}/godot-cpp/gdextension
-            ${{ github.workspace }}/godot-cpp/include
-            ${{ github.workspace }}/custom-godotcpp-build
+            godot-cpp/gdextension
+            godot-cpp/include
+            custom-godotcpp-build
           key: ${{ steps.cache-godot-restore.outputs.cache-primary-key }}
 
+      - name: Cache build dir
+        id: cache-build
+        uses: actions/cache@v5
+        with:
+          path: build
+          key: ${{ matrix.name }}-${{ matrix.build }}-${{ github.ref_name }}-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            ${{ matrix.name }}-${{ matrix.build }}-${{ github.ref_name }}-
+            ${{ matrix.name }}-${{ matrix.build }}-
+
       - name: Build with CMake
-        if: matrix.compilers.mingw != 'true'
+        if: matrix.mingw == 0
         uses: ashutoshvarma/action-cmake-build@master
         with:
-          build-dir: ${{ github.workspace }}/build
-          cc: ${{ matrix.compilers.cc }}
-          cxx: ${{ matrix.compilers.cxx }}
+          build-dir: build
+          cc: ${{ matrix.cc }}
+          cxx: ${{ matrix.cxx }}
           configure-options: -G Ninja
-          build-type: ${{ matrix.build-type }}
+          build-type: ${{ matrix.build }}
 
       - name: Build with CMake MinGW
-        if: matrix.compilers.mingw == 'true'
+        if: matrix.mingw != 0
         uses: ashutoshvarma/action-cmake-build@master
         with:
-          build-dir: ${{ github.workspace }}/build
-          cc: ${{ matrix.compilers.cc }}
-          cxx: ${{ matrix.compilers.cxx }}
+          build-dir: build
+          cc: ${{ matrix.cc }}
+          cxx: ${{ matrix.cxx }}
           configure-options: >-
             -DCMAKE_SYSTEM_NAME=Windows
             -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32
@@ -119,67 +131,28 @@ jobs:
             -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY
             -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
             -G Ninja
-          build-type: ${{ matrix.build-type }}
+          build-type: ${{ matrix.build }}
 
       - name: Upload Built Library Artifact
         # We use v3 of both upload and download artifact for ACT compatibility
         uses: actions/upload-artifact@v4
         with:
-          path: ${{ github.workspace }}/addons/godot-openmpt/bin/*
-          name: bin-${{ matrix.compilers.cc }}-${{ matrix.build-type }}
+          path: addons/godot-openmpt/bin/*
+          name: bin-${{ matrix.cc }}-${{ matrix.build }}
   package:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Extract Linux Debug
+      - name: Merge compiled binaries
         uses: actions/download-artifact@v4
-        # In the case of ACT, it may be that we just ran it with a subset matrix and not the full one.
-        # So it's okay if some of these fail.
-        continue-on-error: ${{ env.ACT && 'true' || 'false' }}
         with:
-          name: bin-gcc-Debug
-          path: ${{ github.workspace }}/addons/godot-openmpt/bin
-
-      - name: Extract Win64 Debug
-        uses: actions/download-artifact@v4
-        continue-on-error: ${{ env.ACT && 'true' || 'false' }}
-        with:
-          name: bin-x86_64-w64-mingw32-gcc-Debug
-          path: ${{ github.workspace }}/addons/godot-openmpt/bin
-
-      - name: Extract Win32 Debug
-        uses: actions/download-artifact@v4
-        continue-on-error: ${{ env.ACT && 'true' || 'false' }}
-        with:
-          name: bin-i686-w64-mingw32-gcc-Debug
-          path: ${{ github.workspace }}/addons/godot-openmpt/bin
-
-      - name: Extract Linux Release
-        uses: actions/download-artifact@v4
-        continue-on-error: ${{ env.ACT && 'true' || 'false' }}
-        with:
-          name: bin-gcc-Release
-          path: ${{ github.workspace }}/addons/godot-openmpt/bin
-
-      - name: Extract Win64 Release
-        uses: actions/download-artifact@v4
-        continue-on-error: ${{ env.ACT && 'true' || 'false' }}
-        with:
-          name: bin-x86_64-w64-mingw32-gcc-Release
-          path: ${{ github.workspace }}/addons/godot-openmpt/bin
-
-      - name: Extract Win32 Release
-        uses: actions/download-artifact@v4
-        continue-on-error: ${{ env.ACT && 'true' || 'false' }}
-        with:
-          name: bin-i686-w64-mingw32-gcc-Release
-          path: ${{ github.workspace }}/addons/godot-openmpt/bin
-
-      - name: Package Output Addon Artifact
+          path: addons/godot-openmpt/bin
+          pattern: bin-*-*
+          merge-multiple: true
+      - name: Upload output addon artifact
         uses: actions/upload-artifact@v4
         with:
-          path: ${{ github.workspace }}/addons
           name: godot-openmpt-${{ github.repository_id }}-${{ github.sha }}
+          path: addons
