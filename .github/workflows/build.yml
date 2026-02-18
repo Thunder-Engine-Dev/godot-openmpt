@@ -59,10 +59,7 @@ jobs:
         id: cache-godot-restore
         uses: actions/cache/restore@v4
         with:
-          path: |
-            godot-cpp/gdextension
-            godot-cpp/include
-            custom-godotcpp-build
+          path: custom-godotcpp-build
           key: ${{ matrix.platform.name }}-${{ hashFiles('.gitmodules') }}-${{ matrix.build }}
 
       - name: Build godot-cpp
@@ -76,6 +73,7 @@ jobs:
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
             -DGENERATE_DEBUG_SYMBOLS=OFF \
+            -DCMAKE_SYSTEM_NAME=Windows \
             -DCMAKE_C_COMPILER=${{ matrix.platform.cc }} \
             -DCMAKE_CXX_COMPILER=${{ matrix.platform.cxx }} \
             -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
@@ -123,7 +121,8 @@ jobs:
         if: matrix.platform.mingw && !matrix.platform.android_abi
         run: |
           cmake -S . -B build -G Ninja \
-            -DGENERATE_DEBUG_SYMBOLS=OFF \
+            -DGENERATE_DEBUG_SYMBOLS=OFF  \
+            -DCMAKE_SYSTEM_NAME=Windows \
             -DCMAKE_C_COMPILER=${{ matrix.platform.cc }} \
             -DCMAKE_CXX_COMPILER=${{ matrix.platform.cxx }} \
             -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
