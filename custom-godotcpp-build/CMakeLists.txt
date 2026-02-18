@@ -132,8 +132,6 @@ add_library(${PROJECT_NAME} STATIC
 )
 add_library(godot::cpp ALIAS ${PROJECT_NAME})
 
-include(GodotCompilerWarnings)
-
 target_compile_features(${PROJECT_NAME}
 	PRIVATE
 		cxx_std_17
