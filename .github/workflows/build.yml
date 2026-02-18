@@ -98,7 +98,7 @@ jobs:
           build-dir: custom-godotcpp-build
           configure-options: >-
             -DGENERATE_DEBUG_SYMBOLS=OFF -G Ninja
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake
+            -DCMAKE_TOOLCHAIN_FILE=${{ env.ANDROID_NDK_HOME }}/build/cmake/android.toolchain.cmake
             -DANDROID_ABI=${{ matrix.platform.android_abi }}
           build-type: ${{ matrix.build }}
 
@@ -145,13 +145,13 @@ jobs:
           build-type: ${{ matrix.build }}
 
       - name: Build library (Android)
-        if: steps.cache-godot-restore.outputs.cache-hit != 'true' && !matrix.platform.mingw && matrix.platform.android_abi
+        if: !matrix.platform.mingw && matrix.platform.android_abi
         uses: ashutoshvarma/action-cmake-build@master
         with:
           build-dir: build
           configure-options: >-
             -DGENERATE_DEBUG_SYMBOLS=OFF -G Ninja
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake
+            -DCMAKE_TOOLCHAIN_FILE=${{ env.ANDROID_NDK_HOME }}/build/cmake/android.toolchain.cmake
             -DANDROID_ABI=${{ matrix.platform.android_abi }}
           build-type: ${{ matrix.build }}
 
