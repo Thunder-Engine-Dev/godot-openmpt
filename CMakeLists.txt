@@ -120,7 +120,11 @@ else()
     set(CMAKE_AR, "gcc-ar")
     set(CMAKE_NM, "gcc-nm")
 	set(CMAKE_RANLIB "gcc-ranlib")
-	set(GODOT_COMPILE_FLAGS "-fPIC -fvisibility=hidden -fvisibility-inlines-hidden -ffunction-sections -fdata-sections -fexceptions -frtti -pthread -O3")
+	set(GODOT_COMPILE_FLAGS "-fPIC -fvisibility=hidden -fvisibility-inlines-hidden -ffunction-sections -fdata-sections -fexceptions -frtti -pthread")
+
+	if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
+		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -O3")
+	endif()
 endif()
 
 # Add the compile flags
