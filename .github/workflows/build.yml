@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         build: [Release, Debug]
@@ -36,6 +36,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install MinGW
         if: matrix.platform.mingw
@@ -43,6 +45,9 @@ jobs:
         with:
           platform: ${{ matrix.platform.mingw == 32 && 'x86' || 'x64' }}
           cc: 0
+
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
 
       - name: Install Android NDK
         if: matrix.platform.android_abi
@@ -58,16 +63,7 @@ jobs:
             godot-cpp/gdextension
             godot-cpp/include
             custom-godotcpp-build
-          key: ${{ matrix.platform.cc }}-${{ hashFiles('.gitmodules') }}-${{ matrix.build }}
-
-      - name: Update submodules
-        if: steps.cache-godot-restore.outputs.cache-hit != 'true'
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install CMake
-        uses: lukka/get-cmake@latest
+          key: ${{ matrix.platform.name }}-${{ hashFiles('.gitmodules') }}-${{ matrix.build }}
 
       - name: Build godot-cpp
         if: steps.cache-godot-restore.outputs.cache-hit != 'true' && !matrix.platform.mingw && !matrix.platform.android_abi
