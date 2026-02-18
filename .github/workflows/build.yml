@@ -145,7 +145,7 @@ jobs:
           build-type: ${{ matrix.build }}
 
       - name: Build library (Android)
-        if: !matrix.platform.mingw && matrix.platform.android_abi
+        if: ${{ !matrix.platform.mingw && matrix.platform.android_abi }}
         uses: ashutoshvarma/action-cmake-build@master
         with:
           build-dir: build
