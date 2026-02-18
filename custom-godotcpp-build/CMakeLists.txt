@@ -47,7 +47,7 @@ if ("${FLOAT_PRECISION}" STREQUAL "double")
 	add_definitions(-DREAL_T_IS_DOUBLE)
 endif()
 
-set(GODOT_COMPILE_FLAGS )
+set(GODOT_COMPILE_FLAGS)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 	# using Visual Studio C++
