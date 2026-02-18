@@ -93,13 +93,6 @@ jobs:
             -DANDROID_ABI=${{ matrix.platform.android_abi }}
           cmake --build custom-godotcpp-build --config ${{ matrix.build }}
 
-      - name: Save godot-cpp
-        id: cache-godot-save
-        uses: actions/cache/save@v4
-        with:
-          path: custom-godotcpp-build
-          key: ${{ matrix.platform.name }}-${{ matrix.build }}-${{ hashFiles('.gitmodules') }}
-
       - name: Cache build dir
         id: cache-build
         uses: actions/cache@v5
