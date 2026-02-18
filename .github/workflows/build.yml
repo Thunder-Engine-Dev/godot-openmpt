@@ -71,7 +71,6 @@ jobs:
 
       - name: Build godot-cpp
         if: steps.cache-godot-restore.outputs.cache-hit != 'true' && !matrix.platform.mingw && !matrix.platform.android_abi
-        uses: ashutoshvarma/action-cmake-build@master
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja -DGENERATE_DEBUG_SYMBOLS=OFF
           cmake --build custom-godotcpp-build --config ${{ matrix.build }}
