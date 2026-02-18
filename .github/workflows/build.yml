@@ -66,21 +66,20 @@ jobs:
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
             -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }}
-          cmake --build custom-godotcpp-build --config ${{ matrix.build }}
+          cmake --build custom-godotcpp-build
 
       - name: Build godot-cpp (MinGW)
         if: ${{ matrix.platform.mingw && !matrix.platform.android_abi }}
         run: |
+          export CC=${{ env.MINGW_ARCH }}-w64-mingw32-gcc CXX=${{ env.MINGW_ARCH }}-w64-mingw32-g++
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
             -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DCMAKE_SYSTEM_NAME=Windows \
-            -DCMAKE_C_COMPILER=${{ env.MINGW_ARCH }}-w64-mingw32-gcc \
-            -DCMAKE_CXX_COMPILER=${{ env.MINGW_ARCH }}-w64-mingw32-g++ \
             -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
             -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
             -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
             -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
-          cmake --build custom-godotcpp-build --config ${{ matrix.build }}
+          cmake --build custom-godotcpp-build
 
       - name: Build godot-cpp (Android)
         if: ${{ !matrix.platform.mingw && matrix.platform.android_abi }}
@@ -89,7 +88,7 @@ jobs:
             -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=${{ matrix.platform.android_abi }} -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }}
-          cmake --build custom-godotcpp-build --config ${{ matrix.build }}
+          cmake --build custom-godotcpp-build
 
       - name: Cache build dir
         id: cache-build
@@ -106,21 +105,20 @@ jobs:
         run: |
           cmake -S . -B build -G Ninja \
             -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }}
-          cmake --build build --config ${{ matrix.build }}
+          cmake --build build
 
       - name: Build library (MinGW)
         if: matrix.platform.mingw && !matrix.platform.android_abi
         run: |
+          export CC=${{ env.MINGW_ARCH }}-w64-mingw32-gcc CXX=${{ env.MINGW_ARCH }}-w64-mingw32-g++
           cmake -S . -B build -G Ninja \
             -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DCMAKE_SYSTEM_NAME=Windows \
-            -DCMAKE_C_COMPILER=${{ env.MINGW_ARCH }}-w64-mingw32-gcc \
-            -DCMAKE_CXX_COMPILER=${{ env.MINGW_ARCH }}-w64-mingw32-g++ \
             -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
             -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
             -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
             -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
-          cmake --build build --config ${{ matrix.build }}
+          cmake --build build
 
       - name: Build library (Android)
         if: ${{ !matrix.platform.mingw && matrix.platform.android_abi }}
@@ -129,7 +127,7 @@ jobs:
             -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=${{ matrix.platform.android_abi }} -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }}
-          cmake --build build --config ${{ matrix.build }}
+          cmake --build build
 
       - name: Upload Built Library Artifact
         uses: actions/upload-artifact@v4
