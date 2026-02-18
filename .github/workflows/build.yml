@@ -73,7 +73,7 @@ jobs:
         if: steps.cache-godot-restore.outputs.cache-hit != 'true' && matrix.platform.mingw && !matrix.platform.android_abi
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
-            -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }}
+            -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DCMAKE_C_COMPILER=${{ matrix.platform.cc }} \
             -DCMAKE_CXX_COMPILER=${{ matrix.platform.cxx }} \
             -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
