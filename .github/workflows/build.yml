@@ -53,7 +53,7 @@ jobs:
         if: matrix.platform.android_abi
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r27d
+          ndk-version: r23c
 
       - name: Restore godot-cpp
         id: cache-godot-restore
@@ -117,7 +117,7 @@ jobs:
         if: ${{ !matrix.platform.mingw && !matrix.platform.android_abi }}
         run: |
           cmake -S . -B build -G Ninja -DGENERATE_DEBUG_SYMBOLS=OFF
-          cmake --build custom-godotcpp-build --config ${{ matrix.build }}
+          cmake --build build --config ${{ matrix.build }}
 
       - name: Build library (MinGW)
         if: matrix.platform.mingw && !matrix.platform.android_abi
@@ -130,7 +130,7 @@ jobs:
             -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
             -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
             -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
-          cmake --build custom-godotcpp-build --config ${{ matrix.build }}
+          cmake --build build --config ${{ matrix.build }}
 
       - name: Build library (Android)
         if: ${{ !matrix.platform.mingw && matrix.platform.android_abi }}
