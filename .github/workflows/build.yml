@@ -60,20 +60,20 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: custom-godotcpp-build
-          key: ${{ matrix.platform.name }}-${{ hashFiles('.gitmodules') }}-${{ matrix.build }}
+          key: ${{ matrix.platform.name }}-${{ matrix.build }}-${{ hashFiles('.gitmodules') }}
 
       - name: Build godot-cpp
         if: steps.cache-godot-restore.outputs.cache-hit != 'true' && !matrix.platform.mingw && !matrix.platform.android_abi
         run: |
-          cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja -DGENERATE_DEBUG_SYMBOLS=OFF
+          cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
+            -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }}
           cmake --build custom-godotcpp-build --config ${{ matrix.build }}
 
       - name: Build godot-cpp (MinGW)
         if: steps.cache-godot-restore.outputs.cache-hit != 'true' && matrix.platform.mingw && !matrix.platform.android_abi
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
-            -DGENERATE_DEBUG_SYMBOLS=OFF \
-            -DCMAKE_SYSTEM_NAME=Windows \
+            -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }}
             -DCMAKE_C_COMPILER=${{ matrix.platform.cc }} \
             -DCMAKE_CXX_COMPILER=${{ matrix.platform.cxx }} \
             -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
@@ -86,7 +86,7 @@ jobs:
         if: steps.cache-godot-restore.outputs.cache-hit != 'true' && !matrix.platform.mingw && matrix.platform.android_abi
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
-            -DGENERATE_DEBUG_SYMBOLS=OFF \
+            -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=${{ matrix.platform.android_abi }}
           cmake --build custom-godotcpp-build --config ${{ matrix.build }}
@@ -95,11 +95,8 @@ jobs:
         id: cache-godot-save
         uses: actions/cache/save@v4
         with:
-          path: |
-            godot-cpp/gdextension
-            godot-cpp/include
-            custom-godotcpp-build
-          key: ${{ steps.cache-godot-restore.outputs.cache-primary-key }}
+          path: custom-godotcpp-build
+          key: ${{ matrix.platform.name }}-${{ matrix.build }}-${{ hashFiles('.gitmodules') }}
 
       - name: Cache build dir
         id: cache-build
@@ -114,14 +111,15 @@ jobs:
       - name: Build library
         if: ${{ !matrix.platform.mingw && !matrix.platform.android_abi }}
         run: |
-          cmake -S . -B build -G Ninja -DGENERATE_DEBUG_SYMBOLS=OFF
+          cmake -S . -B build -G Ninja \
+            -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }}
           cmake --build build --config ${{ matrix.build }}
 
       - name: Build library (MinGW)
         if: matrix.platform.mingw && !matrix.platform.android_abi
         run: |
           cmake -S . -B build -G Ninja \
-            -DGENERATE_DEBUG_SYMBOLS=OFF  \
+            -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DCMAKE_SYSTEM_NAME=Windows \
             -DCMAKE_C_COMPILER=${{ matrix.platform.cc }} \
             -DCMAKE_CXX_COMPILER=${{ matrix.platform.cxx }} \
@@ -135,7 +133,7 @@ jobs:
         if: ${{ !matrix.platform.mingw && matrix.platform.android_abi }}
         run: |
           cmake -S . -B build -G Ninja \
-            -DGENERATE_DEBUG_SYMBOLS=OFF \
+            -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=${{ matrix.platform.android_abi }}
           cmake --build build --config ${{ matrix.build }}
