@@ -73,6 +73,7 @@ jobs:
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
             -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
+            -DCMAKE_SYSTEM_NAME=Windows \
             -DCMAKE_C_COMPILER=${{ env.MINGW_ARCH }}-w64-mingw32-gcc \
             -DCMAKE_CXX_COMPILER=${{ env.MINGW_ARCH }}-w64-mingw32-g++ \
             -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
