@@ -27,6 +27,10 @@ jobs:
             android_abi: armeabi-v7a
           - name: AndroidV8A
             android_abi: arm64-v8a
+          - name: Android32
+            android_abi: x86
+          - name: Android64
+            android_abi: x86_64
     env:
       MINGW_ARCH: ${{ matrix.platform.mingw == 32 && 'i686' || 'x86_64' }}
       ANDROID_PLATFORM: android-23

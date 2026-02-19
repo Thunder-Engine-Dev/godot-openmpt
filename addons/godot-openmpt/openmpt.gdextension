@@ -3,14 +3,20 @@ entry_symbol = "godot_openmpt_init"
 compatibility_minimum = "4.2"
 
 [libraries]
-windows.debug.x86_64 = "bin/libgdmpt-windows.debug.64.dll"
-windows.release.x86_64 = "bin/libgdmpt-windows.release.64.dll"
-
 windows.debug.x86_32 = "bin/libgdmpt-windows.debug.32.dll"
 windows.release.x86_32 = "bin/libgdmpt-windows.release.32.dll"
 
+windows.debug.x86_64 = "bin/libgdmpt-windows.debug.64.dll"
+windows.release.x86_64 = "bin/libgdmpt-windows.release.64.dll"
+
 linux.debug.x86_64 = "bin/libgdmpt-linux.debug.64.so"
 linux.release.x86_64 = "bin/libgdmpt-linux.release.64.so"
+
+android.debug.x86_32 = "bin/libgdmpt-android.x86.debug.so"
+android.release.x86_32 = "bin/libgdmpt-android.x86.release.so"
+
+android.debug.x86_64 = "bin/libgdmpt-android.x86_64.debug.so"
+android.release.x86_64 = "bin/libgdmpt-android.x86_64.release.so"
 
 android.debug.arm32 = "bin/libgdmpt-android.armeabi-v7a.debug.so"
 android.release.arm32 = "bin/libgdmpt-android.armeabi-v7a.release.so"
