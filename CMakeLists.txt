@@ -5,7 +5,7 @@
 # over 100MB. If I don't do anything at all that goes for both Debug AND Release.
 # Hopefully this won't need much modification into the future.
 
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 project(godot-openmpt)
 
 set(CMAKE_STATIC_LIBRARY_PREFIX "")
@@ -178,11 +178,15 @@ target_link_libraries(${PROJECT_NAME}
 set(MAIN_EXT_OUTPUT_NAME libgdmpt-${SYSTEM_NAME}.${BUILD_TYPE}${BITS})
 set_property(TARGET ${PROJECT_NAME} PROPERTY OUTPUT_NAME ${MAIN_EXT_OUTPUT_NAME})
 
-add_custom_command(
-	TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${BUILD_PATH}/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX} ${CMAKE_SOURCE_DIR}/addons/godot-openmpt/bin/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}
-    COMMAND ${CMAKE_COMMAND} -E rm -rf ${EXAMPLE_DIR}/addons/godot-openmpt
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/addons/godot-openmpt ${EXAMPLE_DIR}/addons/godot-openmpt
-	DEPENDS $<TARGETFILE:${PROJECT_NAME}>
-)
+set(REAL_OUT ${BUILD_PATH}/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
+if(ANDROID)
+	set(REAL_OUT ${BUILD_PATH}/androed.so)
+	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+		COMMAND ${ANDROID_TOOLCHAIN_PREFIX}strip --strip-debug ${BUILD_PATH}/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}
+		COMMAND ${CMAKE_COMMAND} -E copy ${BUILD_PATH}/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX} ${REAL_OUT})
+endif()
 
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${REAL_OUT} ${CMAKE_SOURCE_DIR}/addons/godot-openmpt/bin/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}
+    COMMAND ${CMAKE_COMMAND} -E rm -rf ${EXAMPLE_DIR}/addons/godot-openmpt
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/addons/godot-openmpt ${EXAMPLE_DIR}/addons/godot-openmpt)

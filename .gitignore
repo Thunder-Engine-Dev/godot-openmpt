@@ -34,3 +34,6 @@ mono_crash.*.json
 .vs/
 out/
 CMakeSettings.json
+
+/.cache
+/__cmake*
