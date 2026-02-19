@@ -72,7 +72,7 @@ jobs:
           cmake --build custom-godotcpp-build
 
       - name: Build godot-cpp (MinGW)
-        if: ${{ matrix.platform.mingw && !matrix.platform.android_abi }}
+        if: matrix.platform.mingw
         run: |
           export CC=${{ env.MINGW_ARCH }}-w64-mingw32-gcc CXX=${{ env.MINGW_ARCH }}-w64-mingw32-g++
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
@@ -85,12 +85,12 @@ jobs:
           cmake --build custom-godotcpp-build
 
       - name: Build godot-cpp (Android)
-        if: ${{ !matrix.platform.mingw && matrix.platform.android_abi }}
+        if: matrix.platform.android_abi
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build -G Ninja \
-            -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=${{ matrix.platform.android_abi }} -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }}
+            -DANDROID_ABI=${{ matrix.platform.android_abi }} -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }} \
+            -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }}
           cmake --build custom-godotcpp-build
 
       - name: Cache build dir
@@ -108,7 +108,7 @@ jobs:
           cmake --build build
 
       - name: Build library (MinGW)
-        if: matrix.platform.mingw && !matrix.platform.android_abi
+        if: matrix.platform.mingw
         run: |
           export CC=${{ env.MINGW_ARCH }}-w64-mingw32-gcc CXX=${{ env.MINGW_ARCH }}-w64-mingw32-g++
           cmake -S . -B build -G Ninja \
@@ -121,12 +121,12 @@ jobs:
           cmake --build build
 
       - name: Build library (Android)
-        if: ${{ !matrix.platform.mingw && matrix.platform.android_abi }}
+        if: matrix.platform.android_abi
         run: |
           cmake -S . -B build -G Ninja \
-            -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=${{ matrix.platform.android_abi }} -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }}
+            -DANDROID_ABI=${{ matrix.platform.android_abi }} -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }} \
+            -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }}
           cmake --build build
 
       - name: Upload Built Library Artifact
