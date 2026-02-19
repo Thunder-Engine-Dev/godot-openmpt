@@ -71,8 +71,7 @@ jobs:
       - name: Build godot-cpp
         if: ${{ !matrix.platform.mingw && !matrix.platform.android_abi }}
         run: |
-          cmake -S custom-godotcpp-build -B custom-godotcpp-build \
-            ${{ env.CMAKE_COMMON }} -DCMAKE_UNITY_BUILD=TRUE
+          cmake -S custom-godotcpp-build -B custom-godotcpp-build ${{ env.CMAKE_COMMON }}
           cmake --build custom-godotcpp-build
 
       - name: Build godot-cpp (MinGW)
@@ -80,7 +79,6 @@ jobs:
         run: |
           export CC=${{ env.MINGW_ARCH }}-w64-mingw32-gcc CXX=${{ env.MINGW_ARCH }}-w64-mingw32-g++
           cmake -S custom-godotcpp-build -B custom-godotcpp-build ${{ env.CMAKE_COMMON }} \
-            -DCMAKE_UNITY_BUILD=TRUE \
             -DCMAKE_SYSTEM_NAME=Windows \
             -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
             -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
@@ -92,7 +90,6 @@ jobs:
         if: matrix.platform.android_abi
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build ${{ env.CMAKE_COMMON }} \
-            -DCMAKE_UNITY_BUILD=TRUE \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=${{ matrix.platform.android_abi }} -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }} \
             -DGENERATE_DEBUG_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build }}
