@@ -84,8 +84,8 @@ target_include_directories(${PROJECT_NAME} SYSTEM
 set(CMAKE_CXX_OPTIONS_DEBUG)
 set(CMAKE_C_OPTIONS_DEBUG)
 
-set(GODOT_LINKER_OPTIONS -static-libgcc -static-libstdc++ -Wl,--gc-sections "-Wl,-rpath,$ORIGIN")
-set(GODOT_COMPILE_OPTIONS -Oz -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -ffunction-sections -fdata-sections -fexceptions -frtti -pthread)
+set(GODOT_LINKER_OPTIONS -flto -static-libgcc -static-libstdc++ "-Wl,--gc-sections,-rpath,$ORIGIN")
+set(GODOT_COMPILE_OPTIONS -flto -O3 -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -ffunction-sections -fdata-sections -fexceptions -frtti -pthread)
 
 set(CMAKE_AR, "gcc-ar")
 set(CMAKE_NM, "gcc-nm")

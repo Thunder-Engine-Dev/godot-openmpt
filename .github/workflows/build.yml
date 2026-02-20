@@ -35,11 +35,7 @@ jobs:
       MINGW_ARCH: ${{ matrix.platform.mingw == 32 && 'i686' || 'x86_64' }}
       ANDROID_PLATFORM: android-23
       CMAKE_COMMON: >-
-        -G Ninja
-        -DCMAKE_BUILD_TYPE=${{ matrix.build }}
-        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
-        -DCMAKE_C_VISIBILITY_PRESET=hidden
-        -DCMAKE_CXX_VISIBILITY_PRESET=hidden
+        -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
