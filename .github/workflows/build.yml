@@ -38,6 +38,8 @@ jobs:
         -G Ninja
         -DGENERATE_DEBUG_SYMBOLS=OFF
         -DCMAKE_BUILD_TYPE=${{ matrix.build }}
+        -DUNITY_BUILD=TRUE
+        -DCMAKE_UNITY_BUILD_BATCH_SIZE=0
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
