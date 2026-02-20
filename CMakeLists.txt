@@ -112,22 +112,22 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 			NTDDI_VERSION=0x0A00000A)
 else()
 	# STOP adding -g when I DON'T WANT -g!!!
-	set(CMAKE_CXX_FLAGS_DEBUG "")
-	set(CMAKE_C_FLAGS_DEBUG "")
+	set(CMAKE_CXX_OPTIONS_DEBUG "")
+	set(CMAKE_C_OPTIONS_DEBUG "")
 
-	set(GODOT_LINKER_FLAGS "-flto -static-libgcc -static-libstdc++ -Wl,--gc-sections,-R,'$$ORIGIN'")
+	set(GODOT_LINKER_OPTIONS -flto --gc-sections -static-libgcc -static-libstdc++ -rpath "$ORIGIN")
+	set(GODOT_COMPILE_OPTIONS -flto -O3 -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -ffunction-sections -fdata-sections -fexceptions -frtti -pthread)
 
     set(CMAKE_AR, "gcc-ar")
     set(CMAKE_NM, "gcc-nm")
 	set(CMAKE_RANLIB "gcc-ranlib")
-	set(GODOT_COMPILE_FLAGS "-flto -O3 -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -ffunction-sections -fdata-sections -fexceptions -frtti -pthread")
 endif()
 
 # Add the compile flags
-set_property(TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS ${GODOT_COMPILE_FLAGS})
-set_property(TARGET libopenmpt APPEND_STRING PROPERTY COMPILE_FLAGS ${GODOT_COMPILE_FLAGS})
-set_property(TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY LINK_FLAGS ${GODOT_LINKER_FLAGS})
-set_property(TARGET libopenmpt APPEND_STRING PROPERTY LINK_FLAGS ${GODOT_LINKER_FLAGS})
+set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY COMPILE_OPTIONS ${GODOT_COMPILE_OPTIONS})
+set_property(TARGET libopenmpt APPEND PROPERTY COMPILE_OPTIONS ${GODOT_COMPILE_OPTIONS})
+set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY LINK_OPTIONS ${GODOT_LINKER_OPTIONS})
+set_property(TARGET libopenmpt APPEND PROPERTY LINK_OPTIONS ${GODOT_LINKER_OPTIONS})
 
 if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" AND CMAKE_BUILD_TYPE MATCHES Debug)
 
