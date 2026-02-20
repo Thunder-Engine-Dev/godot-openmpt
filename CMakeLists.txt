@@ -81,9 +81,6 @@ target_include_directories(${PROJECT_NAME} SYSTEM
 		${GODOT_GDEXTENSION_DIR}
 )
 
-set(CMAKE_CXX_OPTIONS_DEBUG)
-set(CMAKE_C_OPTIONS_DEBUG)
-
 set(GODOT_LINKER_OPTIONS -flto -static-libgcc -static-libstdc++ "-Wl,--gc-sections,-rpath,$ORIGIN")
 set(GODOT_COMPILE_OPTIONS -flto -O3 -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -ffunction-sections -fdata-sections -fexceptions -frtti -pthread)
 
@@ -134,7 +131,7 @@ set(MAIN_EXT_OUTPUT_NAME libgdmpt-${SYSTEM_NAME}.${BUILD_TYPE}${BITS})
 set_property(TARGET ${PROJECT_NAME} PROPERTY OUTPUT_NAME ${MAIN_EXT_OUTPUT_NAME})
 
 set(REAL_OUT ${BUILD_PATH}/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
-if(ANDROID AND CMAKE_BUILD_TYPE STREQUAL Release)
+if(ANDROID)
 	set(REAL_OUT ${BUILD_PATH}/androed.so)
 	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 		COMMAND ${ANDROID_TOOLCHAIN_ROOT}/bin/llvm-strip --strip-debug ${BUILD_PATH}/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}
