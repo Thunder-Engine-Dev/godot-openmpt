@@ -103,20 +103,21 @@ else()
 	set(GENERATE_BINDING_PARAMETERS "False")
 endif()
 
-execute_process(
-	COMMAND "${Python3_EXECUTABLE}" "-c" "import binding_generator; binding_generator.print_file_list(\"${GODOT_GDEXTENSION_API_FILE}\", \"${CMAKE_CURRENT_BINARY_DIR}\", headers=True, sources=True)"
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../godot-cpp/
-	OUTPUT_VARIABLE GENERATED_FILES_LIST
-	OUTPUT_STRIP_TRAILING_WHITESPACE
+set(GENERATED_FILES_OUT ${CMAKE_CURRENT_BINARY_DIR}/shit.txt)
+add_custom_command(
+	OUTPUT ${GENERATED_FILES_OUT}
+	COMMAND "${Python3_EXECUTABLE}" "-c" "import binding_generator; with open(\"${GENERATED_FILES_OUT}\", \"w\") as f: print(*binding_generator.get_file_list(\"${GODOT_GDEXTENSION_API_FILE}\", \"${CMAKE_CURRENT_BINARY_DIR}\", headers=True, sources=True), sep=";", end=None, file=f)"
+	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../godot-cpp
+	DEPENDS ${CMAKE_SOURCE_DIR}/../godot-cpp/binding_generator.py
 )
 
+file(READ ${GENERATED_FILES_OUT} GENERATED_FILES_LIST)
 add_custom_command(
 	OUTPUT ${GENERATED_FILES_LIST}
 	COMMAND "${Python3_EXECUTABLE}" "-c" "import binding_generator; binding_generator.generate_bindings(\"${GODOT_GDEXTENSION_API_FILE}\", \"${GENERATE_BINDING_PARAMETERS}\", \"${BITS}\", \"${FLOAT_PRECISION}\", \"${CMAKE_CURRENT_BINARY_DIR}\")"
 	VERBATIM
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../godot-cpp/
 	MAIN_DEPENDENCY ${GODOT_GDEXTENSION_API_FILE}
-	DEPENDS ${CMAKE_SOURCE_DIR}/../godot-cpp/binding_generator.py
 	COMMENT "Generating bindings"
 )
 
