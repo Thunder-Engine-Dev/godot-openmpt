@@ -5,7 +5,7 @@
 # over 100MB. If I don't do anything at all that goes for both Debug AND Release.
 # Hopefully this won't need much modification into the future.
 
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 project(godot-openmpt)
 
 set(CMAKE_STATIC_LIBRARY_PREFIX "")
@@ -81,70 +81,18 @@ target_include_directories(${PROJECT_NAME} SYSTEM
 		${GODOT_GDEXTENSION_DIR}
 )
 
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-	# using Visual Studio C++
-	set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /WX") # /GF /MP
-	set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /DTYPED_METHOD_BIND")
-	set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /EHsc")
+set(GODOT_LINKER_OPTIONS -flto -static-libgcc -static-libstdc++ "-Wl,--gc-sections,-rpath,$ORIGIN")
+set(GODOT_COMPILE_OPTIONS -flto -O3 -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -ffunction-sections -fdata-sections -fexceptions -frtti -pthread)
 
-	if(CMAKE_BUILD_TYPE MATCHES Debug)
-		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /MDd") # /Od /RTC1 /Zi
-	else()
-		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /MD /O2") # /Oy /GL /Gy
-		string(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-		string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-	endif(CMAKE_BUILD_TYPE MATCHES Debug)
-
-	# Disable conversion warning, truncation, unreferenced var, signed mismatch
-	set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /wd4244 /wd4305 /wd4101 /wd4018 /wd4267")
-
-	# libopenmpt compiler definitions
-	target_compile_definitions(libopenmpt
-		PRIVATE
-			MPT_BUILD_MSVC
-			WIN32
-			NOMINMAX
-			_CRT_NONSTDC_NO_WARNINGS
-			_CRT_SECURE_NO_WARNINGS
-			_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
-			_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1
-			_WIN32_WINNT=0x0A00
-			NTDDI_VERSION=0x0A00000A)
-else()
-	# STOP adding -g when I DON'T WANT -g!!!
-	set(CMAKE_CXX_FLAGS_DEBUG "")
-	set(CMAKE_C_FLAGS_DEBUG "")
-
-	set(GODOT_LINKER_FLAGS "-static-libgcc -static-libstdc++ -Wl,-flto,--gc-sections,-R,'$$ORIGIN'")
-
-  set(CMAKE_AR, "gcc-ar")
-  set(CMAKE_NM, "gcc-nm")
-	set(CMAKE_RANLIB "gcc-ranlib")
-	set(GODOT_COMPILE_FLAGS "-fPIC -flto -fvisibility=hidden -fvisibility-inlines-hidden -ffunction-sections -fdata-sections -fexceptions -frtti -pthread")
-
-	if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
-		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -O3")
-	endif()
-endif()
+set(CMAKE_AR, "gcc-ar")
+set(CMAKE_NM, "gcc-nm")
+set(CMAKE_RANLIB "gcc-ranlib")
 
 # Add the compile flags
-set_property(TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS ${GODOT_COMPILE_FLAGS})
-set_property(TARGET libopenmpt APPEND_STRING PROPERTY COMPILE_FLAGS ${GODOT_COMPILE_FLAGS})
-set_property(TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY LINK_FLAGS ${GODOT_LINKER_FLAGS})
-set_property(TARGET libopenmpt APPEND_STRING PROPERTY LINK_FLAGS ${GODOT_LINKER_FLAGS})
-
-if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" AND CMAKE_BUILD_TYPE MATCHES Debug)
-	
-
-	# Only generate debug symbols for the main extension... NOT libopenmpt. 
-	# Otherwise the binary sizes will be out of control. 
-	# Comment this out and compile if you really need to debug what libopenmpt is doing 
-	# (you probably don't)
-	#set_property(TARGET libopenmpt APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-omit-frame-pointer -O0 -g")
-	set_property(TARGET libopenmpt APPEND_STRING PROPERTY COMPILE_FLAGS " -O3") # If we don't want debug symbols, may as well -O3
-
-	set_property(TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -fno-omit-frame-pointer -O0 -g")
-endif()
+set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY COMPILE_OPTIONS ${GODOT_COMPILE_OPTIONS})
+set_property(TARGET libopenmpt APPEND PROPERTY COMPILE_OPTIONS ${GODOT_COMPILE_OPTIONS})
+set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY LINK_OPTIONS ${GODOT_LINKER_OPTIONS})
+set_property(TARGET libopenmpt APPEND PROPERTY LINK_OPTIONS ${GODOT_LINKER_OPTIONS})
 
 # Create the correct name (godot.os.build_type.system_bits)
 # Synchronized with godot-cpp's CMakeLists.txt
@@ -182,11 +130,15 @@ target_link_libraries(${PROJECT_NAME}
 set(MAIN_EXT_OUTPUT_NAME libgdmpt-${SYSTEM_NAME}.${BUILD_TYPE}${BITS})
 set_property(TARGET ${PROJECT_NAME} PROPERTY OUTPUT_NAME ${MAIN_EXT_OUTPUT_NAME})
 
-add_custom_command(
-	TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${BUILD_PATH}/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX} ${CMAKE_SOURCE_DIR}/addons/godot-openmpt/bin/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}
-    COMMAND ${CMAKE_COMMAND} -E rm -rf ${EXAMPLE_DIR}/addons/godot-openmpt
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/addons/godot-openmpt ${EXAMPLE_DIR}/addons/godot-openmpt
-	DEPENDS $<TARGETFILE:${PROJECT_NAME}>
-)
+set(REAL_OUT ${BUILD_PATH}/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
+if(ANDROID)
+	set(REAL_OUT ${BUILD_PATH}/androed.so)
+	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+		COMMAND ${ANDROID_TOOLCHAIN_ROOT}/bin/llvm-strip --strip-debug ${BUILD_PATH}/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}
+		COMMAND ${CMAKE_COMMAND} -E copy ${BUILD_PATH}/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX} ${REAL_OUT})
+endif()
 
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${REAL_OUT} ${CMAKE_SOURCE_DIR}/addons/godot-openmpt/bin/${MAIN_EXT_OUTPUT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}
+    COMMAND ${CMAKE_COMMAND} -E rm -rf ${EXAMPLE_DIR}/addons/godot-openmpt
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/addons/godot-openmpt ${EXAMPLE_DIR}/addons/godot-openmpt)

@@ -47,7 +47,7 @@ if ("${FLOAT_PRECISION}" STREQUAL "double")
 	add_definitions(-DREAL_T_IS_DOUBLE)
 endif()
 
-set(GODOT_COMPILE_FLAGS )
+set(GODOT_COMPILE_FLAGS)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 	# using Visual Studio C++
@@ -116,7 +116,6 @@ add_custom_command(
 	VERBATIM
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../godot-cpp/
 	MAIN_DEPENDENCY ${GODOT_GDEXTENSION_API_FILE}
-	DEPENDS ${CMAKE_SOURCE_DIR}/../godot-cpp/binding_generator.py
 	COMMENT "Generating bindings"
 )
 
@@ -131,8 +130,6 @@ add_library(${PROJECT_NAME} STATIC
 		${GENERATED_FILES_LIST}
 )
 add_library(godot::cpp ALIAS ${PROJECT_NAME})
-
-include(GodotCompilerWarnings)
 
 target_compile_features(${PROJECT_NAME}
 	PRIVATE
