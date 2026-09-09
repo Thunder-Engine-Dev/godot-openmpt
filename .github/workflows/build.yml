@@ -14,33 +14,39 @@ concurrency:
 jobs:
   build:
     name: ${{ matrix.name }}
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: Linux
+            os: ubuntu-24.04
             target: linux
           - name: Win64
-            target: mingw
-            mingw: 64
+            os: windows-2022
+            target: msvc
+            arch: x64
           - name: Win32
-            target: mingw
-            mingw: 32
+            os: windows-2022
+            target: msvc
+            arch: x86
           - name: AndroidV7A
+            os: ubuntu-24.04
             target: android
             android_abi: armeabi-v7a
           - name: AndroidV8A
+            os: ubuntu-24.04
             target: android
             android_abi: arm64-v8a
           - name: Android32
+            os: ubuntu-24.04
             target: android
             android_abi: x86
           - name: Android64
+            os: ubuntu-24.04
             target: android
             android_abi: x86_64
     env:
-      MINGW_ARCH: ${{ matrix.mingw == 32 && 'i686' || 'x86_64' }}
       ANDROID_PLATFORM: android-23
     steps:
       - name: Checkout Repository
@@ -48,15 +54,14 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install MinGW
-        if: matrix.target == 'mingw'
-        uses: egor-tensin/setup-mingw@v3
-        with:
-          platform: ${{ matrix.mingw == 32 && 'x86' || 'x64' }}
-          cc: 0
-
       - name: Install CMake
         uses: lukka/get-cmake@latest
+
+      - name: Setup MSVC
+        if: matrix.target == 'msvc'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
 
       - name: Install Android NDK
         if: matrix.target == 'android'
@@ -66,33 +71,25 @@ jobs:
           ndk-version: r23c
 
       - name: Configure toolchain
+        shell: bash
         run: |
           args="-G Ninja -DCMAKE_BUILD_TYPE=Release"
-          case "${{ matrix.target }}" in
-            mingw)
-              echo "CC=${MINGW_ARCH}-w64-mingw32-gcc" >> "$GITHUB_ENV"
-              echo "CXX=${MINGW_ARCH}-w64-mingw32-g++" >> "$GITHUB_ENV"
-              args="$args -DCMAKE_SYSTEM_NAME=Windows"
-              args="$args -DCMAKE_FIND_ROOT_PATH=/usr/${MINGW_ARCH}-w64-mingw32"
-              args="$args -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER"
-              args="$args -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY"
-              args="$args -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY"
-              ;;
-            android)
-              args="$args -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake"
-              args="$args -DANDROID_ABI=${{ matrix.android_abi }}"
-              args="$args -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }}"
-              echo "GODOT_CPP_EXTRA_ARGS=-DGENERATE_DEBUG_SYMBOLS=OFF" >> "$GITHUB_ENV"
-              ;;
-          esac
+          if [ "${{ matrix.target }}" = android ]; then
+            args="$args -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake"
+            args="$args -DANDROID_ABI=${{ matrix.android_abi }}"
+            args="$args -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }}"
+            echo "GODOT_CPP_EXTRA_ARGS=-DGENERATE_DEBUG_SYMBOLS=OFF" >> "$GITHUB_ENV"
+          fi
           echo "CMAKE_ARGS=$args" >> "$GITHUB_ENV"
 
       - name: Build godot-cpp
+        shell: bash
         run: |
           cmake -S custom-godotcpp-build -B custom-godotcpp-build $CMAKE_ARGS $GODOT_CPP_EXTRA_ARGS
           cmake --build custom-godotcpp-build
 
       - name: Build library
+        shell: bash
         run: |
           cmake -S . -B build $CMAKE_ARGS
           cmake --build build
