@@ -146,6 +146,11 @@ target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
 	"${GODOT_GDEXTENSION_DIR}"
 )
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+	$<$<CONFIG:Debug>:DEBUG_ENABLED>
+	$<$<CONFIG:Debug>:DEBUG_METHODS_ENABLED>
+)
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
 	OUTPUT_NAME "${GDEXTENSION_OUTPUT_NAME}"
 	PREFIX ""
@@ -191,7 +196,14 @@ function(godot_openmpt_configure_target target)
 		)
 		set_target_properties(${target} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ON)
 		# Android NDK uses libc++, not libgcc/libstdc++.
-		if(NOT APPLE AND NOT ANDROID)
+		# MinGW: also -static so libwinpthread is not a DLL dependency.
+		if(MINGW)
+			target_link_options(${target} PRIVATE
+				-static
+				-static-libgcc
+				-static-libstdc++
+			)
+		elseif(NOT APPLE AND NOT ANDROID)
 			target_link_options(${target} PRIVATE
 				-static-libgcc
 				-static-libstdc++
@@ -244,6 +256,14 @@ else()
 	)
 	if(UNIX AND NOT APPLE AND NOT ANDROID)
 		target_link_options(${PROJECT_NAME} PRIVATE "-Wl,-rpath,\$ORIGIN")
+	endif()
+	target_link_options(${PROJECT_NAME} PRIVATE
+		$<$<CONFIG:Release>:-s>
+	)
+	if(MINGW)
+		target_link_options(${PROJECT_NAME} PRIVATE
+			"LINKER:--exclude-all-symbols"
+		)
 	endif()
 endif()
 

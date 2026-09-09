@@ -22,30 +22,46 @@ jobs:
           - name: Linux
             os: ubuntu-24.04
             target: linux
+            build_type: Release
+          - name: LinuxDebug
+            os: ubuntu-24.04
+            target: linux
+            build_type: Debug
           - name: Win64
             os: windows-2022
             target: msvc
             arch: x64
+            build_type: Release
+          - name: Win64Debug
+            os: windows-2022
+            target: msvc
+            arch: x64
+            build_type: Debug
           - name: Win32
             os: windows-2022
             target: msvc
             arch: x86
+            build_type: Release
           - name: AndroidV7A
             os: ubuntu-24.04
             target: android
             android_abi: armeabi-v7a
+            build_type: Release
           - name: AndroidV8A
             os: ubuntu-24.04
             target: android
             android_abi: arm64-v8a
+            build_type: Release
           - name: Android32
             os: ubuntu-24.04
             target: android
             android_abi: x86
+            build_type: Release
           - name: Android64
             os: ubuntu-24.04
             target: android
             android_abi: x86_64
+            build_type: Release
     env:
       ANDROID_PLATFORM: android-23
     steps:
@@ -73,14 +89,21 @@ jobs:
       - name: Configure toolchain
         shell: bash
         run: |
-          args="-G Ninja -DCMAKE_BUILD_TYPE=Release"
+          args="-G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}"
+          extra_args=()
           if [ "${{ matrix.target }}" = android ]; then
             args="$args -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake"
             args="$args -DANDROID_ABI=${{ matrix.android_abi }}"
             args="$args -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }}"
-            echo "GODOT_CPP_EXTRA_ARGS=-DGENERATE_DEBUG_SYMBOLS=OFF" >> "$GITHUB_ENV"
+            extra_args+=(-DGENERATE_DEBUG_SYMBOLS=OFF)
           elif [ "${{ matrix.target }}" = msvc ]; then
-            echo "GODOT_CPP_EXTRA_ARGS=-DGODOT_DISABLE_EXCEPTIONS=OFF" >> "$GITHUB_ENV"
+            extra_args+=(-DGODOT_DISABLE_EXCEPTIONS=OFF)
+          fi
+          if [ "${{ matrix.build_type }}" = Debug ]; then
+            extra_args+=(-DGENERATE_DEBUG_SYMBOLS=OFF)
+          fi
+          if [ ${#extra_args[@]} -gt 0 ]; then
+            echo "GODOT_CPP_EXTRA_ARGS=${extra_args[*]}" >> "$GITHUB_ENV"
           fi
           echo "CMAKE_ARGS=$args" >> "$GITHUB_ENV"
 

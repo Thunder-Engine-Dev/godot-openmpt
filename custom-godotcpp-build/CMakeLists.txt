@@ -168,6 +168,20 @@ target_include_directories(${PROJECT_NAME} ${GODOT_CPP_SYSTEM_HEADERS_ATTRIBUTE}
 # Add the compile flags
 set_property(TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS ${GODOT_COMPILE_FLAGS})
 
+# Static libgcc/stdc++ (and winpthread on MinGW) so the final GDExtension has no extra runtime DLLs.
+if(MINGW)
+	target_link_options(${PROJECT_NAME} PRIVATE
+		-static
+		-static-libgcc
+		-static-libstdc++
+	)
+elseif(NOT MSVC AND NOT APPLE AND NOT ANDROID)
+	target_link_options(${PROJECT_NAME} PRIVATE
+		-static-libgcc
+		-static-libstdc++
+	)
+endif()
+
 # Create the correct name (godot.os.build_type.system_bits)
 string(TOLOWER "${CMAKE_SYSTEM_NAME}" SYSTEM_NAME)
 string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
