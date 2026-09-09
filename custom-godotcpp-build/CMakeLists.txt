@@ -54,7 +54,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 	set(GODOT_COMPILE_FLAGS "/utf-8") # /GF /MP
 
 	if(CMAKE_BUILD_TYPE MATCHES Debug)
-		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /MTd") # /Od /RTC1 /Zi
+		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /MTd /Oi /Oy- /Zo") # /Od /RTC1 /Zi
 	else()
 		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /MT /O2") # /Oy /GL /Gy
 		STRING(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -69,7 +69,7 @@ else()  # GCC/Clang
 
 	if(CMAKE_BUILD_TYPE MATCHES Debug)
 		if(GENERATE_DEBUG_SYMBOLS)
-			set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -fno-omit-frame-pointer -O0 -g")
+			set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -fno-omit-frame-pointer -Og -g")
 		else()
 			# Used mostly when compiling the canonical binaries via Github Workflow.
 			# This is required because otherwise the binary can be very large.

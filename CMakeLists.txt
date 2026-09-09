@@ -176,6 +176,11 @@ function(godot_openmpt_configure_target target)
 			/wd4101
 			/wd4018
 			/wd4267
+			# Debug: intrinsics + frame pointers. /Zd does not exist on modern MSVC;
+			# /Zo keeps locals inspectable. Avoid /O1+/O2 — they fight /RTC and stepping.
+			$<$<CONFIG:Debug>:/Oi>
+			$<$<CONFIG:Debug>:/Oy->
+			$<$<CONFIG:Debug>:/Zo>
 			$<$<NOT:$<CONFIG:Debug>>:/O2>
 		)
 	else()
@@ -188,6 +193,7 @@ function(godot_openmpt_configure_target target)
 			-fexceptions
 			-frtti
 			-pthread
+			$<$<CONFIG:Debug>:-Og>
 			$<$<NOT:$<CONFIG:Debug>>:-O3>
 		)
 		target_link_options(${target} PRIVATE
@@ -240,7 +246,7 @@ else()
 	if(LIBOPENMPT_DEBUG_SYMBOLS)
 		target_compile_options(libopenmpt PRIVATE
 			$<$<CONFIG:Debug>:-fno-omit-frame-pointer>
-			$<$<CONFIG:Debug>:-O0>
+			$<$<CONFIG:Debug>:-Og>
 			$<$<CONFIG:Debug>:-g>
 		)
 	else()
@@ -251,7 +257,7 @@ else()
 
 	target_compile_options(${PROJECT_NAME} PRIVATE
 		$<$<CONFIG:Debug>:-fno-omit-frame-pointer>
-		$<$<CONFIG:Debug>:-O0>
+		$<$<CONFIG:Debug>:-Og>
 		$<$<CONFIG:Debug>:-g>
 	)
 	if(UNIX AND NOT APPLE AND NOT ANDROID)
