@@ -4,10 +4,15 @@
 #include <godot_cpp/classes/audio_stream.hpp>
 #include <godot_cpp/classes/audio_stream_playback.hpp>
 
+#include <godot_cpp/templates/local_vector.hpp>
 #include <godot_cpp/templates/vector.hpp>
 
 #include <libopenmpt/libopenmpt.hpp>
 #include <libopenmpt/libopenmpt_ext.hpp>
+
+#include <map>
+#include <memory>
+#include <string>
 
 using namespace godot;
 
@@ -17,12 +22,22 @@ class AudioStreamPlaybackMPT : public AudioStreamPlayback {
     GDCLASS(AudioStreamPlaybackMPT, AudioStreamPlayback);
 private:
 	Ref<AudioStreamMPT> base;
-	openmpt::module_ext *mpt_module = nullptr;
+	std::unique_ptr<openmpt::module_ext> mpt_module;
 	openmpt::ext::interactive  *mpt_interactive = nullptr;
 	openmpt::ext::interactive2 *mpt_interactive2 = nullptr;
 	openmpt::ext::interactive3 *mpt_interactive3 = nullptr;
 
 	bool active = false;
+
+	LocalVector<float> mix_mono;
+	int32_t applied_repeat_count = 0;
+	int32_t applied_interpolation = 0;
+	int32_t applied_amiga_filter = 0;
+	bool has_applied_render_state = false;
+
+	void clear_module();
+	bool load_module(const PackedByteArray &p_data, const std::map<std::string, std::string> &p_ctls);
+	void apply_stream_render_settings();
 
 	friend class AudioStreamMPT;
 protected:
@@ -152,13 +167,14 @@ private:
 
 	// We need to create a module to parse any information about the file,
 	// otherwise we would only need to have one in the Playback class.
-	openmpt::module *mpt_module = nullptr;
+	std::unique_ptr<openmpt::module> mpt_module;
 
 	Vector<AudioStreamPlaybackMPT*> open_playback_objects;
 
 	Error module_error = Error::OK;
 
 	std::map<std::string, std::string> get_initial_ctls() const;
+	void reload_open_playbacks();
 
 	friend class AudioStreamPlaybackMPT;
 protected:
@@ -236,7 +252,7 @@ public:
 	virtual String _get_stream_name() const override;
 
 	AudioStreamMPT();
-	~AudioStreamMPT();
+	~AudioStreamMPT() = default;
 };
 
 VARIANT_ENUM_CAST(AudioStreamMPT::LoopMode)

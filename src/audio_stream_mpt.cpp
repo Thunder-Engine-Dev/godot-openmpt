@@ -3,12 +3,43 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/classes/audio_server.hpp>
 
-#include <godot_cpp/templates/local_vector.hpp>
-
 #include <libopenmpt/libopenmpt.hpp>
 #include <godot_cpp/core/error_macros.hpp>
 
+#include <cstring>
+#include <exception>
+
 using namespace godot;
+
+namespace {
+
+struct AudioServerLockGuard {
+	AudioServer *server = nullptr;
+
+	AudioServerLockGuard() {
+		server = AudioServer::get_singleton();
+		if (server) {
+			server->lock();
+		}
+	}
+
+	~AudioServerLockGuard() {
+		if (server) {
+			server->unlock();
+		}
+	}
+
+	AudioServerLockGuard(const AudioServerLockGuard &) = delete;
+	AudioServerLockGuard &operator=(const AudioServerLockGuard &) = delete;
+};
+
+void write_silence(AudioFrame *p_buffer, int32_t p_frames) {
+	if (p_frames > 0) {
+		std::memset(p_buffer, 0, static_cast<size_t>(p_frames) * sizeof(AudioFrame));
+	}
+}
+
+} // namespace
 
 #define MOD_NOT_LOADED_MSG "Module not loaded."
 #define INT_NOT_LOADED_MSG "Interactive extension isn't supported. (perhaps the file format does not implement it)"
@@ -295,55 +326,104 @@ bool AudioStreamPlaybackMPT::get_sync_samples() const {
 	return this->mpt_module->ctl_get_boolean("seek.sync_samples");
 }
 
+void AudioStreamPlaybackMPT::clear_module() {
+	mpt_module.reset();
+	mpt_interactive = nullptr;
+	mpt_interactive2 = nullptr;
+	mpt_interactive3 = nullptr;
+	has_applied_render_state = false;
+}
+
+bool AudioStreamPlaybackMPT::load_module(const PackedByteArray &p_data, const std::map<std::string, std::string> &p_ctls) {
+	clear_module();
+	if (p_data.is_empty()) {
+		return true;
+	}
+
+	try {
+		mpt_module = std::make_unique<openmpt::module_ext>(p_data.ptr(), p_data.size(), std::clog, p_ctls);
+	} catch (const std::exception &) {
+		return false;
+	}
+
+	mpt_interactive = static_cast<openmpt::ext::interactive *>(
+			mpt_module->get_interface(openmpt::ext::interactive_id));
+	mpt_interactive2 = static_cast<openmpt::ext::interactive2 *>(
+			mpt_module->get_interface(openmpt::ext::interactive2_id));
+	mpt_interactive3 = static_cast<openmpt::ext::interactive3 *>(
+			mpt_module->get_interface(openmpt::ext::interactive3_id));
+	return true;
+}
+
+void AudioStreamPlaybackMPT::apply_stream_render_settings() {
+	const int32_t repeat = base->loop_mode == AudioStreamMPT::LoopMode::LOOP_DISABLED ? 0 : -1;
+	if (!has_applied_render_state || applied_repeat_count != repeat) {
+		mpt_module->set_repeat_count(repeat);
+		applied_repeat_count = repeat;
+	}
+
+	const int32_t interpolation = static_cast<int32_t>(base->interpolation_mode);
+	if (!has_applied_render_state || applied_interpolation != interpolation) {
+		mpt_module->set_render_param(openmpt::module::render_param::RENDER_INTERPOLATIONFILTER_LENGTH, interpolation);
+		applied_interpolation = interpolation;
+	}
+
+	const int32_t amiga = static_cast<int32_t>(base->amiga_filter);
+	if (!has_applied_render_state || applied_amiga_filter != amiga) {
+		mpt_module->ctl_set_boolean("render.resampler.emulate_amiga", amiga != static_cast<int32_t>(AudioStreamMPT::AmigaFilter::AMIGA_DISABLED));
+		switch (base->amiga_filter) {
+			case AudioStreamMPT::AmigaFilter::AMIGA_AUTO:
+				mpt_module->ctl_set_text("render.resampler.emulate_amiga_type", "auto");
+				break;
+			case AudioStreamMPT::AmigaFilter::AMIGA_UNFILTERED:
+				mpt_module->ctl_set_text("render.resampler.emulate_amiga_type", "unfiltered");
+				break;
+			case AudioStreamMPT::AmigaFilter::AMIGA_A500:
+				mpt_module->ctl_set_text("render.resampler.emulate_amiga_type", "a500");
+				break;
+			case AudioStreamMPT::AmigaFilter::AMIGA_A1200:
+				mpt_module->ctl_set_text("render.resampler.emulate_amiga_type", "a1200");
+				break;
+			default:
+				break;
+		}
+		applied_amiga_filter = amiga;
+	}
+
+	has_applied_render_state = true;
+}
+
 int32_t AudioStreamPlaybackMPT::_mix(AudioFrame *p_buffer, double p_rate_scale, int32_t p_frames) {
 	if (!this->mpt_module) {
 		active = false;
-		for (int i = 0; i < p_frames; i++)
-			p_buffer[i] = AudioFrame{ 0, 0 };
+		write_silence(p_buffer, p_frames);
 		return 0;
 	}
 
-	this->mpt_module->set_repeat_count(base->loop_mode == AudioStreamMPT::LoopMode::LOOP_DISABLED ? 0 : -1);
+	apply_stream_render_settings();
 
-	this->mpt_module->set_render_param(openmpt::module::render_param::RENDER_INTERPOLATIONFILTER_LENGTH, base->interpolation_mode);
-	
-	this->mpt_module->ctl_set_boolean("render.resampler.emulate_amiga", base->amiga_filter == AudioStreamMPT::AmigaFilter::AMIGA_DISABLED ? false : true);
-	switch (base->amiga_filter) {
-		case AudioStreamMPT::AmigaFilter::AMIGA_AUTO:
-			this->mpt_module->ctl_set_text( "render.resampler.emulate_amiga_type", "auto" );
-			break;
-		case AudioStreamMPT::AmigaFilter::AMIGA_UNFILTERED:
-			this->mpt_module->ctl_set_text( "render.resampler.emulate_amiga_type", "unfiltered" );
-			break;
-		case AudioStreamMPT::AmigaFilter::AMIGA_A500:
-			this->mpt_module->ctl_set_text( "render.resampler.emulate_amiga_type", "a500" );
-			break;
-		case AudioStreamMPT::AmigaFilter::AMIGA_A1200:
-			this->mpt_module->ctl_set_text( "render.resampler.emulate_amiga_type", "a1200" );
-			break;
-	}
-
-	double srate = (AudioServer::get_singleton()->get_mix_rate() * p_rate_scale) * AudioServer::get_singleton()->get_playback_speed_scale();
+	AudioServer *audio_server = AudioServer::get_singleton();
+	const double srate = (audio_server->get_mix_rate() * p_rate_scale) * audio_server->get_playback_speed_scale();
 
 	if (base->stereo) {
-		if (this->mpt_module->read_interleaved_stereo((int32_t)srate, p_frames, reinterpret_cast<float*>(p_buffer)) == 0) {
+		if (this->mpt_module->read_interleaved_stereo((int32_t)srate, p_frames, reinterpret_cast<float *>(p_buffer)) == 0) {
 			active = false;
-			for (int i = 0; i < p_frames; i++)
-				p_buffer[i] = AudioFrame{ 0, 0 };
+			write_silence(p_buffer, p_frames);
 			return 0;
 		}
 	} else {
-		LocalVector<float> mono;
-		mono.resize(p_frames);
-		if (this->mpt_module->read((int32_t)srate, p_frames, mono.ptr()) == 0) {
+		if (mix_mono.size() < static_cast<uint32_t>(p_frames)) {
+			mix_mono.resize(p_frames);
+		}
+		if (this->mpt_module->read((int32_t)srate, p_frames, mix_mono.ptr()) == 0) {
 			active = false;
-			for (int i = 0; i < p_frames; i++)
-				p_buffer[i] = AudioFrame{ 0, 0 };
+			write_silence(p_buffer, p_frames);
 			return 0;
 		}
 
-		for (int i = 0; i < p_frames; i++)
-			p_buffer[i] = AudioFrame{ mono[i], mono[i] };
+		for (int32_t i = 0; i < p_frames; i++) {
+			p_buffer[i] = AudioFrame{ mix_mono[i], mix_mono[i] };
+		}
 	}
 	return p_frames;
 }
@@ -418,10 +498,10 @@ void AudioStreamPlaybackMPT::_bind_methods() {
 AudioStreamPlaybackMPT::AudioStreamPlaybackMPT() {}
 
 AudioStreamPlaybackMPT::~AudioStreamPlaybackMPT() {
-	int index = base->open_playback_objects.find(this, 0);
-	if (index > 0)
-		base->open_playback_objects.remove_at(index);
-	if (this->mpt_module) delete mpt_module;
+	if (base.is_valid()) {
+		base->open_playback_objects.erase(this);
+	}
+	clear_module();
 }
 
 /////////////////////
@@ -502,54 +582,49 @@ std::map<std::string, std::string> AudioStreamMPT::get_initial_ctls() const {
 	};
 }
 
+void AudioStreamMPT::reload_open_playbacks() {
+	if (open_playback_objects.is_empty()) {
+		return;
+	}
+
+	AudioServerLockGuard lock;
+	if (data.is_empty()) {
+		for (AudioStreamPlaybackMPT *playback : open_playback_objects) {
+			playback->clear_module();
+		}
+		return;
+	}
+
+	const std::map<std::string, std::string> ctls = get_initial_ctls();
+	for (AudioStreamPlaybackMPT *playback : open_playback_objects) {
+		if (!playback->load_module(data, ctls)) {
+			WARN_PRINT_ED("Failed to reload OpenMPT module for an active playback.");
+		}
+	}
+}
+
 void AudioStreamMPT::set_data(const PackedByteArray& p_data) {
 	module_error = Error::OK;
 
-	if (p_data.is_empty())
-	{
-		if (this->mpt_module) delete mpt_module;
-		goto set_empty_module;
-	}
-	this->data = p_data;
+	mpt_module.reset();
 
-	if (this->mpt_module) delete mpt_module;
+	if (p_data.is_empty()) {
+		data = PackedByteArray();
+		reload_open_playbacks();
+		return;
+	}
+
+	data = p_data;
 	try {
-		this->mpt_module = new openmpt::module(this->data.ptr(), this->data.size(), std::clog, get_initial_ctls());
-	} catch (openmpt::exception& e) {
+		mpt_module = std::make_unique<openmpt::module>(data.ptr(), data.size(), std::clog, get_initial_ctls());
+	} catch (const std::exception &) {
 		module_error = Error::ERR_PARSE_ERROR;
-		goto set_empty_module;
+		data = PackedByteArray();
+		reload_open_playbacks();
+		return;
 	}
 
-	if (open_playback_objects.is_empty()) return;
-	AudioServer::get_singleton()->lock();
-	for (AudioStreamPlaybackMPT* playback : open_playback_objects) {
-		if (playback->mpt_module) delete playback->mpt_module;
-		playback->mpt_module = new openmpt::module_ext(this->data.ptr(), this->data.size(), std::clog, get_initial_ctls());
-		playback->mpt_interactive = static_cast<openmpt::ext::interactive*>(
-			playback->mpt_module->get_interface(openmpt::ext::interactive_id));
-		playback->mpt_interactive2 = static_cast<openmpt::ext::interactive2*>(
-			playback->mpt_module->get_interface(openmpt::ext::interactive2_id));
-		playback->mpt_interactive3 = static_cast<openmpt::ext::interactive3*>(
-			playback->mpt_module->get_interface(openmpt::ext::interactive3_id));
-	}
-	AudioServer::get_singleton()->unlock();
-	return;
-
-set_empty_module:
-	this->mpt_module = nullptr;
-	this->data = PackedByteArray();
-
-	if (open_playback_objects.is_empty()) return;
-	AudioServer::get_singleton()->lock();
-	for (AudioStreamPlaybackMPT* playback : open_playback_objects) {
-		if (playback->mpt_module) delete playback->mpt_module;
-		playback->mpt_module = nullptr;
-		playback->mpt_interactive = nullptr;
-		playback->mpt_interactive2 = nullptr;
-		playback->mpt_interactive3 = nullptr;
-	}
-	AudioServer::get_singleton()->unlock();
-	return;
+	reload_open_playbacks();
 }
 
 const PackedByteArray& AudioStreamMPT::get_data() const {
@@ -725,17 +800,10 @@ Ref<AudioStreamPlayback> AudioStreamMPT::_instantiate_playback() const {
 	Ref<AudioStreamPlaybackMPT> playback;
 	playback.instantiate();
 	playback->base = Ref<AudioStreamMPT>(this);
-	playback->mpt_module = !data.is_empty() ? new openmpt::module_ext(this->data.ptr(), this->data.size(), std::clog, get_initial_ctls()) : nullptr;
-	if (playback->mpt_module)
-	{
-		playback->mpt_interactive = static_cast<openmpt::ext::interactive*>(
-			playback->mpt_module->get_interface(openmpt::ext::interactive_id));
-		playback->mpt_interactive2 = static_cast<openmpt::ext::interactive2*>(
-			playback->mpt_module->get_interface(openmpt::ext::interactive2_id));
-		playback->mpt_interactive3 = static_cast<openmpt::ext::interactive3*>(
-			playback->mpt_module->get_interface(openmpt::ext::interactive3_id));
+	if (!data.is_empty() && !playback->load_module(data, get_initial_ctls())) {
+		WARN_PRINT_ED("Failed to load OpenMPT module for playback.");
 	}
-	const_cast<AudioStreamMPT*>(this)->open_playback_objects.append(playback.ptr());
+	const_cast<AudioStreamMPT *>(this)->open_playback_objects.append(playback.ptr());
 	return playback;
 }
 
@@ -839,8 +907,4 @@ void AudioStreamMPT::_bind_methods() {
 }
 
 AudioStreamMPT::AudioStreamMPT() {
-}
-
-AudioStreamMPT::~AudioStreamMPT() {
-	if (this->mpt_module) delete mpt_module;
 }
