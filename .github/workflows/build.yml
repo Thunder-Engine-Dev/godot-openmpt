@@ -79,6 +79,8 @@ jobs:
             args="$args -DANDROID_ABI=${{ matrix.android_abi }}"
             args="$args -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }}"
             echo "GODOT_CPP_EXTRA_ARGS=-DGENERATE_DEBUG_SYMBOLS=OFF" >> "$GITHUB_ENV"
+          elif [ "${{ matrix.target }}" = msvc ]; then
+            echo "GODOT_CPP_EXTRA_ARGS=-DGODOT_DISABLE_EXCEPTIONS=OFF" >> "$GITHUB_ENV"
           fi
           echo "CMAKE_ARGS=$args" >> "$GITHUB_ENV"
 

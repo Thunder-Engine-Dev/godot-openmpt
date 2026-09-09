@@ -82,10 +82,17 @@ endif()
 
 # Disable exception handling. Godot doesn't use exceptions anywhere, and this
 # saves around 20% of binary size and very significant build time (GH-80513).
-option(GODOT_DISABLE_EXCEPTIONS ON "Force disabling exception handling code")
+# MSVC must keep exceptions on: the GDExtension uses /EHsc (libopenmpt throws),
+# and mixing that with _HAS_EXCEPTIONS=0 crashes at DLL load.
+if(MSVC)
+	set(_godot_disable_exceptions_default OFF)
+else()
+	set(_godot_disable_exceptions_default ON)
+endif()
+option(GODOT_DISABLE_EXCEPTIONS "Force disabling exception handling code" ${_godot_disable_exceptions_default})
 if (GODOT_DISABLE_EXCEPTIONS)
 	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -D_HAS_EXCEPTIONS=0")
+		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /EHs-c- -D_HAS_EXCEPTIONS=0")
 	else()
 		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -fno-exceptions")
 	endif()

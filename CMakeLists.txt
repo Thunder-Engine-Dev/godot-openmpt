@@ -162,8 +162,10 @@ function(godot_openmpt_configure_target target)
 
 	if(MSVC)
 		target_compile_options(${target} PRIVATE
-			/WX
+			/utf-8
 			/EHsc
+			/Zc:__cplusplus
+			/Zc:preprocessor
 			/wd4244
 			/wd4305
 			/wd4101
@@ -205,6 +207,8 @@ if(MSVC)
 	target_compile_definitions(libopenmpt PRIVATE
 		MPT_BUILD_MSVC
 		WIN32
+		UNICODE
+		_UNICODE
 		NOMINMAX
 		_CRT_NONSTDC_NO_WARNINGS
 		_CRT_SECURE_NO_WARNINGS
@@ -213,7 +217,12 @@ if(MSVC)
 		_WIN32_WINNT=0x0A00
 		NTDDI_VERSION=0x0A00000A
 	)
-	target_compile_definitions(${PROJECT_NAME} PRIVATE TYPED_METHOD_BIND)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE
+		TYPED_METHOD_BIND
+		NOMINMAX
+	)
+	# Ensure Godot can GetProcAddress() the entry symbol on MSVC.
+	target_link_options(${PROJECT_NAME} PRIVATE "/EXPORT:godot_openmpt_init")
 else()
 	# Keep libopenmpt optimized and without debug symbols unless explicitly requested.
 	if(LIBOPENMPT_DEBUG_SYMBOLS)
