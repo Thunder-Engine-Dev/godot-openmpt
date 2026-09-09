@@ -37,7 +37,7 @@ foreach(_output_var ARCHIVE LIBRARY RUNTIME)
 endforeach()
 
 if(MSVC)
-	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 	string(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 else()
 	set(CMAKE_C_FLAGS_DEBUG "")
