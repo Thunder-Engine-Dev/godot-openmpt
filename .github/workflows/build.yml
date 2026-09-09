@@ -13,28 +13,35 @@ concurrency:
 
 jobs:
   build:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
         include:
           - name: Linux
+            target: linux
           - name: Win64
+            target: mingw
             mingw: 64
           - name: Win32
+            target: mingw
             mingw: 32
           - name: AndroidV7A
+            target: android
             android_abi: armeabi-v7a
           - name: AndroidV8A
+            target: android
             android_abi: arm64-v8a
           - name: Android32
+            target: android
             android_abi: x86
           - name: Android64
+            target: android
             android_abi: x86_64
     env:
       MINGW_ARCH: ${{ matrix.mingw == 32 && 'i686' || 'x86_64' }}
       ANDROID_PLATFORM: android-23
-      CMAKE_COMMON: >-
-        -G Ninja -DCMAKE_BUILD_TYPE=Release
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -42,7 +49,7 @@ jobs:
           submodules: recursive
 
       - name: Install MinGW
-        if: matrix.mingw
+        if: matrix.target == 'mingw'
         uses: egor-tensin/setup-mingw@v3
         with:
           platform: ${{ matrix.mingw == 32 && 'x86' || 'x64' }}
@@ -52,63 +59,42 @@ jobs:
         uses: lukka/get-cmake@latest
 
       - name: Install Android NDK
-        if: matrix.android_abi
+        if: matrix.target == 'android'
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r23c
 
+      - name: Configure toolchain
+        run: |
+          args="-G Ninja -DCMAKE_BUILD_TYPE=Release"
+          case "${{ matrix.target }}" in
+            mingw)
+              echo "CC=${MINGW_ARCH}-w64-mingw32-gcc" >> "$GITHUB_ENV"
+              echo "CXX=${MINGW_ARCH}-w64-mingw32-g++" >> "$GITHUB_ENV"
+              args="$args -DCMAKE_SYSTEM_NAME=Windows"
+              args="$args -DCMAKE_FIND_ROOT_PATH=/usr/${MINGW_ARCH}-w64-mingw32"
+              args="$args -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER"
+              args="$args -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY"
+              args="$args -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY"
+              ;;
+            android)
+              args="$args -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake"
+              args="$args -DANDROID_ABI=${{ matrix.android_abi }}"
+              args="$args -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }}"
+              echo "GODOT_CPP_EXTRA_ARGS=-DGENERATE_DEBUG_SYMBOLS=OFF" >> "$GITHUB_ENV"
+              ;;
+          esac
+          echo "CMAKE_ARGS=$args" >> "$GITHUB_ENV"
+
       - name: Build godot-cpp
-        if: ${{ !matrix.mingw && !matrix.android_abi }}
         run: |
-          cmake -S custom-godotcpp-build -B custom-godotcpp-build ${{ env.CMAKE_COMMON }}
-          cmake --build custom-godotcpp-build
-
-      - name: Build godot-cpp (MinGW)
-        if: matrix.mingw
-        run: |
-          export CC=${{ env.MINGW_ARCH }}-w64-mingw32-gcc CXX=${{ env.MINGW_ARCH }}-w64-mingw32-g++
-          cmake -S custom-godotcpp-build -B custom-godotcpp-build ${{ env.CMAKE_COMMON }} \
-            -DCMAKE_SYSTEM_NAME=Windows \
-            -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
-            -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-            -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-            -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
-          cmake --build custom-godotcpp-build
-
-      - name: Build godot-cpp (Android)
-        if: matrix.android_abi
-        run: |
-          cmake -S custom-godotcpp-build -B custom-godotcpp-build ${{ env.CMAKE_COMMON }} \
-            -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=${{ matrix.android_abi }} -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }} \
-            -DGENERATE_DEBUG_SYMBOLS=OFF
+          cmake -S custom-godotcpp-build -B custom-godotcpp-build $CMAKE_ARGS $GODOT_CPP_EXTRA_ARGS
           cmake --build custom-godotcpp-build
 
       - name: Build library
-        if: ${{ !matrix.mingw && !matrix.android_abi }}
         run: |
-          cmake -S . -B build ${{ env.CMAKE_COMMON }}
-          cmake --build build
-
-      - name: Build library (MinGW)
-        if: matrix.mingw
-        run: |
-          export CC=${{ env.MINGW_ARCH }}-w64-mingw32-gcc CXX=${{ env.MINGW_ARCH }}-w64-mingw32-g++
-          cmake -S . -B build ${{ env.CMAKE_COMMON }} \
-            -DCMAKE_SYSTEM_NAME=Windows \
-            -DCMAKE_FIND_ROOT_PATH=/usr/${{ env.MINGW_ARCH }}-w64-mingw32 \
-            -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-            -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-            -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
-          cmake --build build
-
-      - name: Build library (Android)
-        if: matrix.android_abi
-        run: |
-          cmake -S . -B build ${{ env.CMAKE_COMMON }} \
-            -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=${{ matrix.android_abi }} -DANDROID_PLATFORM=${{ env.ANDROID_PLATFORM }}
+          cmake -S . -B build $CMAKE_ARGS
           cmake --build build
 
       - name: Upload Built Library Artifact
@@ -116,6 +102,7 @@ jobs:
         with:
           path: addons/godot-openmpt/bin/*
           name: bin-${{ matrix.name }}
+          if-no-files-found: error
 
   package:
     runs-on: ubuntu-24.04
